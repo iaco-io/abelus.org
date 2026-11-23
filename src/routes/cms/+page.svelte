@@ -81,7 +81,7 @@
 
 	/** @type {ReturnType<typeof github> | null} */
 	let api = $state(savedToken ? github(savedToken) : null);
-	let kind = $state(/** @type {Section} */ ('pages'));
+	let kind = $state(/** @type {Section} */ ('dictionary'));
 	let entries = $state(/** @type {Entry[]} */ (cached?.entries ?? []));
 	let files = $state(/** @type {string[]} */ (cached?.files ?? []));
 	let loading = $state(false);
