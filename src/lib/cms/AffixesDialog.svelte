@@ -1,8 +1,8 @@
 <script>
 	// edits the affixes that make a dictionary word's other forms: a prefix goes before the word, a suffix after it.
 	// spaces are kept ("a " makes "a word", a separate particle); a hyphen on the word's side means attached.
-	// each word gets one form for every affix of another part of speech
-	import { Save, Undo2, Plus, X } from '@lucide/svelte';
+	// each word gets one form for every affix of another part of speech, in the order they have here
+	import { Save, Undo2, Plus, X, ChevronUp, ChevronDown } from '@lucide/svelte';
 	import { PARTS, typeOf, attach } from '../dictionary.js';
 
 	/**
@@ -16,6 +16,12 @@
 	// an affix needs a letter, and a part of speech
 	const filled = (/** @type {Affix} */ a) => !!a.affix.replace(/[-\s]/g, '');
 	const bad = $derived(draft.some((a) => (filled(a) || a.pos.trim()) && (!filled(a) || !a.pos.trim())));
+
+	function move(/** @type {number} */ i, /** @type {number} */ step) {
+		const j = i + step;
+		if (j < 0 || j >= draft.length) return;
+		[draft[i], draft[j]] = [draft[j], draft[i]];
+	}
 
 	// typing a leading - or space makes it a suffix, a trailing one a prefix
 	function typed(/** @type {Affix} */ a) {
@@ -62,10 +68,12 @@
 					<small class="sample">{filled(a) ? `“${attach(a, 'word')}”` : ''}</small>
 					<button class="icon" aria-label="remove affix" onclick={() => draft.splice(i, 1)}><X size={16} /></button>
 				</div>
-				<label class="row">
+				<div class="row">
 					<span>makes</span>
 					<input bind:value={a.pos} placeholder="adjective" list="parts" autocapitalize="off" aria-label="part of speech" />
-				</label>
+					<button class="icon" aria-label="move up" title="move up" disabled={i === 0} onclick={() => move(i, -1)}><ChevronUp size={18} /></button>
+					<button class="icon" aria-label="move down" title="move down" disabled={i === draft.length - 1} onclick={() => move(i, 1)}><ChevronDown size={18} /></button>
+				</div>
 			</div>
 		{/each}
 		<button class="pill add" onclick={() => draft.push({ affix: '', pos: '', type: 'suffix' })}><Plus size={16} /> affix</button>
@@ -189,6 +197,11 @@
 		color: var(--muted);
 		background: none;
 		cursor: pointer;
+	}
+
+	.icon:disabled {
+		opacity: 0.3;
+		cursor: default;
 	}
 
 	.add {
