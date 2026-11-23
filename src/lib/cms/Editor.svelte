@@ -9,11 +9,12 @@
 	import { pasteFile } from './clipboard.js';
 	import { highlight } from './highlight.js';
 	import { urls, serialize } from '../markdown.js';
+	import { LANGUAGES, PARTS, wordInfo, slug } from '../dictionary.js';
 
 	/**
-	 * @typedef {{ title: string, description: string, image: string, date: string, draft: boolean, unlisted?: boolean, featured?: boolean, icon?: string, alias: string[], redirect: string }} Meta
+	 * @typedef {{ title: string, description: string, image: string, date: string, draft: boolean, unlisted?: boolean, featured?: boolean, icon?: string, alias: string[], redirect: string, [field: string]: any }} Meta
 	 * @type {{
-	 *   item: { kind: 'posts' | 'pages' | 'redirects', name: string, from: string, isNew: boolean, meta: Meta, body: string },
+	 *   item: { kind: 'dictionary' | 'posts' | 'pages' | 'redirects', name: string, from: string, isNew: boolean, meta: Meta, body: string },
 	 *   images: string[],
 	 *   resolve: (name: string) => string,
 	 *   onsave: () => Promise<void>,
@@ -21,6 +22,8 @@
 	 *   ask: (props: Record<string, any>) => Promise<any>,
 	 *   manage: (name: string) => Promise<string>,
 	 *   alphabet: Record<string, { to: string, on: boolean }>,
+ *   affixes: { affix: string, pos: string }[],
+ *   words: string[],
 	 *   categories: string[],
 	 *   tagsInUse: string[],
 	 *   ondelete: () => Promise<void>,
@@ -29,7 +32,7 @@
 	 *   ondiscard: () => void
 	 * }}
 	 */
-	let { item = $bindable(), images, resolve, ask, manage, alphabet, categories, tagsInUse, onsave, onupload, ondelete, onback, partial, ondiscard } = $props();
+	let { item = $bindable(), affixes, words, images, resolve, ask, manage, alphabet, categories, tagsInUse, onsave, onupload, ondelete, onback, partial, ondiscard } = $props();
 
 	let busy = $state('');
 	/** @type {HTMLTextAreaElement | undefined} */
@@ -37,6 +40,13 @@
 
 	// redirects only need a name and a destination
 	const short = $derived(item.kind === 'redirects');
+	// dictionary words: no tags, aliases or redirect, but translations and the rest
+	const isWord = $derived(item.kind === 'dictionary');
+	// a new word's file name (its address) follows the word, until it's changed by hand
+	let autoName = $state(untrack(() => item.isNew && item.kind === 'dictionary'));
+	$effect(() => {
+		if (autoName) item.name = slug(item.meta.title);
+	});
 	// a number in front, when used, has a fixed width: 001- for posts, 01- for pages
 	const digits = $derived(item.kind === 'posts' ? 3 : item.kind === 'pages' ? 2 : 0);
 	const badNumber = $derived(!!digits && (item.name.match(/^(\d+)-/)?.[1].length ?? digits) !== digits);
@@ -474,7 +484,7 @@
 		JSON.parse(
 			JSON.stringify({
 				type: 'preview',
-				item: { title: item.meta.title, description: item.meta.description, image: item.meta.image, tags: $state.snapshot(item.meta.tags ?? []) },
+				item: { title: item.meta.title, description: item.meta.description, image: item.meta.image, tags: $state.snapshot(item.meta.tags ?? []), word: isWord ? wordInfo($state.snapshot(item.meta), affixes) : null },
 				body: item.body,
 				alphabet,
 				images: Object.fromEntries(images.map((name) => [name, resolve(name)]))
@@ -582,13 +592,13 @@
 
 	<div class="fields">
 		<label class="wide">
-			<span>title</span>
-			<textarea class="grow" rows="1" bind:value={() => item.meta.title, (v) => (item.meta.title = flat(v))} placeholder="title" onkeydown={oneLine} {@attach fit(() => item.meta.title)}></textarea>
+			<span>{isWord ? 'word' : 'title'}</span>
+			<textarea class="grow" rows="1" bind:value={() => item.meta.title, (v) => (item.meta.title = flat(v))} placeholder={isWord ? 'the abelus word' : 'title'} onkeydown={oneLine} {@attach fit(() => item.meta.title)}></textarea>
 		</label>
 		<label>
 			<span>file name {badNumber ? `→ number must be ${'0'.repeat(digits - 1)}1-` : links ? `→ ${links}` : ''}</span>
 			<span class="suffix">
-				<input bind:value={item.name} placeholder="file-name" />
+				<input bind:value={item.name} placeholder="file-name" oninput={() => (autoName = false)} />
 				<em>.md</em>
 			</span>
 		</label>
@@ -606,7 +616,7 @@
 		{#if !short}
 			<label class="wide">
 				<span>description</span>
-				<textarea class="grow" rows="1" bind:value={() => item.meta.description, (v) => (item.meta.description = flat(v))} placeholder="a short summary for lists and rss" onkeydown={oneLine} {@attach fit(() => item.meta.description)}></textarea>
+				<textarea class="grow" rows="1" bind:value={() => item.meta.description, (v) => (item.meta.description = flat(v))} placeholder={isWord ? 'a short meaning, shown in the dictionary list' : 'a short summary for lists and rss'} onkeydown={oneLine} {@attach fit(() => item.meta.description)}></textarea>
 			</label>
 			<div>
 				<span class="label">main image</span>
@@ -640,11 +650,63 @@
 				{#if coverNote}<small class="note">{coverNote}</small>{/if}
 			</div>
 		{/if}
-		<label class="wide">
-			<span>redirect to</span>
-			<input type="url" bind:value={item.meta.redirect} placeholder="https://…" />
-		</label>
-		{#if !short}
+		{#if isWord}
+			{@const forms = wordInfo(item.meta, affixes).forms}
+			<label>
+				<span>part of speech</span>
+				<input bind:value={item.meta.pos} placeholder="noun" list="parts" autocapitalize="off" />
+			</label>
+			<label>
+				<span>pronunciation</span>
+				<input bind:value={item.meta.pronunciation} placeholder="a.ˈbe.lus" autocapitalize="off" spellcheck="false" />
+			</label>
+			{#each LANGUAGES as { code, name } (code)}
+				<label>
+					<span>{name}</span>
+					<input bind:value={item.meta[code]} placeholder="word, another word" lang={code} />
+				</label>
+			{/each}
+			<div class="wide">
+				<span class="label">forms · made by the affixes (menu)</span>
+				<small class="note">{forms.length ? forms.map((f) => `${f.pos}: ${f.form}`).join(' · ') : 'none yet: pick a part of speech and add affixes in the menu'}</small>
+			</div>
+			<div class="wide">
+				<span class="label">examples</span>
+				<div class="aliases">
+					{#each item.meta.examples, i}
+						<div class="alias example">
+							<input bind:value={item.meta.examples[i]} placeholder="an abelus sentence — its translation" />
+							<button class="icon" aria-label="remove example" onclick={() => item.meta.examples.splice(i, 1)}><X size={16} /></button>
+						</div>
+					{/each}
+					<button class="pill add" onclick={() => item.meta.examples.push('')}><Plus size={16} /> example</button>
+				</div>
+			</div>
+			<div class="wide">
+				<span class="label">related words</span>
+				<div class="aliases">
+					{#each item.meta.related, i}
+						<div class="alias">
+							<input bind:value={item.meta.related[i]} placeholder="word" list="dictionary-words" autocapitalize="off" />
+							<button class="icon" aria-label="remove related word" onclick={() => item.meta.related.splice(i, 1)}><X size={16} /></button>
+						</div>
+					{/each}
+					<button class="pill add" onclick={() => item.meta.related.push('')}><Plus size={16} /> word</button>
+				</div>
+			</div>
+			<datalist id="parts">
+				{#each PARTS as p}<option value={p}></option>{/each}
+			</datalist>
+			<datalist id="dictionary-words">
+				{#each words as w}<option value={w}></option>{/each}
+			</datalist>
+		{:else}
+			<label class="wide">
+				<span>redirect to</span>
+				<input type="url" bind:value={item.meta.redirect} placeholder="https://…" />
+			</label>
+		{/if}
+		{#if !short && !isWord}
 			<!-- tags sort posts and pages into topics; categories (set in the menu's tags) show a bookmark -->
 			<div class="wide">
 				<span class="label">tags</span>
@@ -667,6 +729,7 @@
 				</datalist>
 			</div>
 		{/if}
+		{#if !isWord}
 		<div class="wide">
 			<span class="label">aliases</span>
 			<div class="aliases">
@@ -681,6 +744,7 @@
 				<button class="pill add" onclick={() => item.meta.alias.push('')}><Plus size={16} /> alias</button>
 			</div>
 		</div>
+		{/if}
 		<!-- draft and, for pages, unlisted (for posts, featured), side by side -->
 		<div class="switches wide">
 			<button
@@ -690,7 +754,7 @@
 				onclick={() => (item.meta.draft = !item.meta.draft)}
 			>
 				<span class="track"><span class="knob">{#if item.meta.draft}<PencilLine size={14} strokeWidth={2} />{/if}</span></span>
-				draft <small>{short ? 'link not published' : 'hidden from the blog and rss'}</small>
+				draft <small>{short ? 'link not published' : isWord ? 'hidden from the site and the dictionary' : 'hidden from the blog and rss'}</small>
 			</button>
 			{#if item.kind === 'pages'}
 				<button
@@ -1092,6 +1156,10 @@
 	.alias {
 		position: relative;
 		width: 10rem;
+	}
+
+	.example {
+		width: 100%;
 	}
 
 	.alias input {

@@ -4,10 +4,11 @@
 	import { savedCategories, tagUrl, cleanTag, tagName } from './tags.js';
 	import { render } from './markdown.js';
 	import { fadeCards } from './focusFade.js';
+	import Word from './Word.svelte';
 
 	/**
 	 * @type {{
-	 *   item: { title: string, description: string, image: string, tags?: string[] },
+	 *   item: { title: string, description: string, image: string, tags?: string[], word?: any },
 	 *   body: string | null,
 	 *   resolve?: (path: string) => string
 	 * }}
@@ -35,6 +36,7 @@
 			</ul>
 		{/if}
 	</header>
+	{#if item.word}<Word word={item.word} />{/if}
 	{#if item.image}<img class="cover" src={resolve(item.image)} alt="" />{/if}
 	<div class="prose" {@attach fadeCards}>
 		{#if body === null}<p class="loading">…</p>{:else}{@html html}{/if}

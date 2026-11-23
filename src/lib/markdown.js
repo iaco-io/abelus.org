@@ -1,9 +1,15 @@
 import { external } from './links.js';
 import { accessible } from './tp.js';
 import { Marked } from 'marked';
+import { LANGUAGES } from './dictionary.js';
 
 // properties at the top of each .md file, in this order
-export const FIELDS = ['title', 'description', 'image', 'date', 'draft', 'redirect', 'alias', 'tags', 'unlisted', 'icon', 'featured'];
+export const FIELDS = ['title', 'description', 'image', 'date', 'draft', 'redirect', 'alias', 'tags', 'unlisted', 'icon', 'featured',
+	// dictionary words only
+	'pos', 'pronunciation', ...LANGUAGES.map((l) => l.code), 'examples', 'related'];
+
+// addresses the site itself uses: nothing else may take them
+export const RESERVED = ['/cms/', '/preview/', '/rss.xml/', '/post/', '/_app/', '/dictionary/'];
 
 const QUOTES = /^["'‘’“”](.*)["'‘’“”]$/;
 const unquote = (/** @type {string} */ value) => value.trim().replace(QUOTES, '$1').trim();
@@ -55,7 +61,7 @@ export function serialize(meta, body) {
 }
 
 /** file name to urls: `001-my-intro` is /post/my-intro/ and /001/, `test` is just /post/test/ */
-export function urls(/** @type {'posts' | 'pages' | 'redirects'} */ kind, /** @type {string} */ name) {
+export function urls(/** @type {'posts' | 'pages' | 'redirects' | 'dictionary'} */ kind, /** @type {string} */ name) {
 	const [, id, rest] = name.match(/^(\d+)-(.+)$/) ?? [];
 	const slug = rest ?? name;
 	return { slug, id: id ?? '', url: kind === 'posts' ? `/post/${slug}/` : `/${slug}/` };

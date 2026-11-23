@@ -1,13 +1,15 @@
 <script>
-	// "new" icons: a file with + for pages, a feather with + for posts, a link with + for redirects, an image + for media
-	import { FilePlusCorner, Feather, Link, Plus, ImagePlus } from '@lucide/svelte';
+	// "new" icons: a book with + for dictionary words, a file with + for pages, a feather with + for posts, a link with + for redirects, an image + for media
+	import { FilePlusCorner, Feather, Link, Plus, ImagePlus, BookPlus } from '@lucide/svelte';
 
-	/** @type {{ kind: 'posts' | 'pages' | 'redirects' | 'media', size?: number }} */
+	/** @type {{ kind: 'dictionary' | 'posts' | 'pages' | 'redirects' | 'media', size?: number }} */
 	let { kind, size = 22 } = $props();
 </script>
 
 {#if kind === 'pages'}
 	<FilePlusCorner {size} />
+{:else if kind === 'dictionary'}
+	<BookPlus {size} />
 {:else if kind === 'media'}
 	<ImagePlus {size} />
 {:else}

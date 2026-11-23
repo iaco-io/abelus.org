@@ -1,8 +1,10 @@
 import { cleanTag } from './tags.js';
-// build-time only: reads src/{posts,pages,redirects}/*.md, images from src/media/
-import { parse, urls, normalize, isIcon } from './markdown.js';
+// build-time only: reads src/{posts,pages,redirects,dictionary}/*.md, images from src/media/
+import { parse, urls, normalize, isIcon, RESERVED } from './markdown.js';
+import { wordInfo } from './dictionary.js';
+import affixes from '../affixes.json';
 
-const files = import.meta.glob(['/src/posts/*.md', '/src/pages/*.md', '/src/redirects/*.md', '!**/README.md'], {
+const files = import.meta.glob(['/src/posts/*.md', '/src/pages/*.md', '/src/redirects/*.md', '/src/dictionary/*.md', '!**/README.md'], {
 	query: '?raw',
 	import: 'default',
 	eager: true
@@ -15,7 +17,7 @@ export const media = Object.fromEntries(
 	)
 );
 
-/** @param {'posts' | 'pages' | 'redirects'} kind */
+/** @param {'posts' | 'pages' | 'redirects' | 'dictionary'} kind */
 function load(kind) {
 	return Object.entries(files)
 		.filter(([path]) => path.startsWith(`/src/${kind}/`))
@@ -45,6 +47,8 @@ function load(kind) {
 				featured: meta.featured === 'true',
 				// a page's icon in the menu: lucide/name or a file from the media folder
 				icon: meta.icon || 'lucide/circle-chevron-right',
+				// dictionary words: part of speech, translations, forms…
+				word: kind === 'dictionary' ? wordInfo(meta, affixes) : null,
 				body
 			};
 		})
@@ -57,14 +61,14 @@ export const posts = load('posts');
 export const pages = load('pages');
 // short links like /youtube/, they only redirect
 export const redirects = load('redirects').filter((item) => item.redirect);
-
-const reserved = ['/cms/', '/preview/', '/rss.xml/', '/post/', '/_app/'];
+// abelus words, a to z
+export const dictionary = load('dictionary').sort((a, b) => a.title.localeCompare(b.title));
 
 /** every url on the site, pointing at its post or page */
 export const routes = new Map();
-for (const item of [...pages, ...posts, ...redirects]) {
+for (const item of [...pages, ...posts, ...redirects, ...dictionary]) {
 	for (const path of item.paths) {
-		if (reserved.some((r) => path === r || (r !== '/post/' && path.startsWith(r)))) {
+		if (RESERVED.some((r) => path === r || (r !== '/post/' && path.startsWith(r)))) {
 			throw new Error(`${item.kind}/${item.slug}: ${path} is reserved`);
 		}
 		const other = routes.get(path);

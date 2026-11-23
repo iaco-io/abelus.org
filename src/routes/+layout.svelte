@@ -1,7 +1,7 @@
 <script>
 	import '../app.css';
 	import { onMount } from 'svelte';
-	import { Newspaper } from '@lucide/svelte';
+	import { Newspaper, BookA } from '@lucide/svelte';
 	import BeeIcon from '#lib/BeeIcon.svelte';
 	import { tagUrl } from '#lib/tags.js';
 	import { external, destination } from '#lib/links.js';
@@ -10,7 +10,7 @@
 	import DayClock from '#lib/DayClock.svelte';
 	import { page } from '$app/state';
 
-	/** @type {{ children: import('svelte').Snippet, data: { pages: { url: string, title: string, icon: { src: string, mask: boolean } }[], categories: { tag: string, name: string, icon: { src: string, mask: boolean } }[], order: string[] } }} */
+	/** @type {{ children: import('svelte').Snippet, data: { dictionary?: boolean, pages: { url: string, title: string, icon: { src: string, mask: boolean } }[], categories: { tag: string, name: string, icon: { src: string, mask: boolean } }[], order: string[] } }} */
 	let { children, data } = $props();
 
 	// a link to a page that doesn't exist has no data (the error page then sends the visitor home)
@@ -25,6 +25,7 @@
 		[
 			{ href: '/', label: 'abelus.org', icon: BeeIcon },
 			{ href: '/#latest', label: 'latest', icon: Newspaper },
+			...(data.dictionary ? [{ href: '/dictionary/', label: 'dictionary', icon: BookA }] : []),
 			...(data.categories ?? []).map(({ tag, name, icon }) => ({ href: tagUrl(tag), label: name, picture: icon })),
 			...(data.pages ?? []).map((p) => ({ href: p.url, label: p.title, picture: p.icon }))
 		].toSorted((a, b) => rank(a.href) - rank(b.href))

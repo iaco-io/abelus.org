@@ -1,4 +1,4 @@
-import { posts, pages, menuIcon } from '#lib/content.js';
+import { posts, pages, dictionary, menuIcon } from '#lib/content.js';
 import { savedCategories, categoryIcons, tagName, DEFAULT_CATEGORY_ICON } from '#lib/tags.js';
 import order from '../menu.json';
 
@@ -14,6 +14,8 @@ export function load() {
 		categories: savedCategories
 			.filter((tag) => used.has(tag))
 			.map((tag) => ({ tag, name: tagName(tag), icon: menuIcon(categoryIcons[tag] || DEFAULT_CATEGORY_ICON) })),
+		// the dictionary shows in the menu once it has words
+		dictionary: dictionary.length > 0,
 		// the order set in the cms (links by address); links not in it come after, as usual
 		order: /** @type {string[]} */ (order)
 	};

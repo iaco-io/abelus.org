@@ -1,7 +1,7 @@
 <script>
 	import '#lib/cms/cms.css';
 	import { onMount, untrack } from 'svelte';
-	import { Star, ListX, PencilLine, ArrowUpNarrowWide, Tag, ListOrdered, ClipboardPaste, Lock, Feather, File as FileIcon, ExternalLink, CloudAlert, Image as ImageIcon, Music, Film } from '@lucide/svelte';
+	import { Star, ListX, PencilLine, ArrowUpNarrowWide, Tag, ListOrdered, ClipboardPaste, Lock, Feather, File as FileIcon, ExternalLink, CloudAlert, Image as ImageIcon, Music, Film, BookA, Puzzle } from '@lucide/svelte';
 	import Fabs from '#lib/Fabs.svelte';
 	import Panel from '#lib/Panel.svelte';
 	import ThemeToggle from '#lib/ThemeToggle.svelte';
@@ -22,15 +22,18 @@
 	import Thumb from '#lib/cms/Thumb.svelte';
 	import BeeIcon from '#lib/BeeIcon.svelte';
 	import AlphabetDialog from '#lib/cms/AlphabetDialog.svelte';
+	import AffixesDialog from '#lib/cms/AffixesDialog.svelte';
+	import savedAffixes from '../../affixes.json';
+	import { LANGUAGES, list as wordList } from '#lib/dictionary.js';
 	import { setAlphabet, alphabet as inAlphabet } from '#lib/tp.js';
 	import savedAlphabet from '../../alphabet.json';
 	import { github, rawUrl, utf8ToBase64 } from '#lib/cms/github.js';
 	import { encrypt, decrypt } from '#lib/crypto.js';
-	import { parse, serialize, urls } from '#lib/markdown.js';
+	import { parse, serialize, urls, RESERVED } from '#lib/markdown.js';
 
-	/** @typedef {'posts' | 'pages' | 'redirects'} Kind */
+	/** @typedef {'dictionary' | 'posts' | 'pages' | 'redirects'} Kind */
 	/** @typedef {Kind | 'media'} Section */
-	/** @typedef {{ title: string, description: string, image: string, date: string, draft: boolean, unlisted: boolean, featured: boolean, icon: string, alias: string[], tags: string[], redirect: string }} Meta */
+	/** @typedef {{ title: string, description: string, image: string, date: string, draft: boolean, unlisted: boolean, featured: boolean, icon: string, alias: string[], tags: string[], redirect: string, pos: string, pronunciation: string, examples: string[], related: string[], [lang: string]: any }} Meta */
 	/** @typedef {{ kind: Kind, name: string, sha: string, meta: Meta, body: string }} Entry */
 
 	// the token is remembered only in the installed app; in a browser tab it lasts until the tab closes
@@ -86,6 +89,7 @@
 	let menu = $state(false);
 
 	const KINDS = /** @type {const} */ ([
+		{ kind: 'dictionary', icon: BookA },
 		{ kind: 'pages', icon: FileIcon },
 		{ kind: 'posts', icon: Feather },
 		{ kind: 'redirects', icon: ExternalLink },
@@ -183,7 +187,13 @@
 		icon: m.icon ?? '',
 		alias: [m.alias ?? []].flat(),
 		tags: [m.tags ?? []].flat(),
-		redirect: m.redirect ?? ''
+		redirect: m.redirect ?? '',
+		// dictionary words: translations are kept as typed, 'a, b'
+		pos: m.pos ?? '',
+		pronunciation: m.pronunciation ?? '',
+		...Object.fromEntries(LANGUAGES.map((l) => [l.code, wordList(m[l.code]).join(', ')])),
+		examples: [m.examples ?? []].flat(),
+		related: wordList(m.related)
 	});
 
 	const images = $derived(
@@ -228,14 +238,14 @@
 
 	// list filters: show only drafts, only unlisted pages, only items with unsaved changes on this device
 	// (several at once show any of them). posts can also put drafts and unsaved ones first
-	let filters = $state({ posts: { draft: false, local: false, featured: false, first: true }, pages: { draft: false, local: false, unlisted: false, first: true } });
+	let filters = $state({ dictionary: { draft: false, local: false, first: false }, posts: { draft: false, local: false, featured: false, first: true }, pages: { draft: false, local: false, unlisted: false, first: true } });
 	const isLocal = (/** @type {Entry} */ e) => !!partials[`${e.kind}/${e.name}`];
 	// the groups when sorting: 0 drafts and unsaved, then (pages only) 1 unlisted, then the rest
 	// (posts: drafts and unsaved, then featured, then the rest; pages: drafts and unsaved, unlisted, the rest)
-	const GROUPS = { posts: ['draft / local posts', 'featured posts', 'active posts'], pages: ['draft / local pages', 'unlisted pages', 'active pages'] };
+	const GROUPS = { dictionary: ['draft / local words', '', 'words'], posts: ['draft / local posts', 'featured posts', 'active posts'], pages: ['draft / local pages', 'unlisted pages', 'active pages'] };
 	const rank = (/** @type {Entry} */ e) =>
 		e.meta.draft || isLocal(e) ? 0 : (e.kind === 'pages' ? e.meta.unlisted : e.meta.featured) ? 1 : 2;
-	/** @param {'posts' | 'pages'} k @param {Entry} e */
+	/** @param {'dictionary' | 'posts' | 'pages'} k @param {Entry} e */
 	function shown(k, e) {
 		const f = /** @type {Record<string, boolean>} */ (filters[k]);
 		const on = ['draft', 'local', 'unlisted', 'featured'].filter((x) => f[x]);
@@ -261,6 +271,7 @@
 		const links = [
 			{ href: '/', label: 'abelus.org' },
 			{ href: '/#latest', label: 'latest' },
+			...(live.some((e) => e.kind === 'dictionary') ? [{ href: '/dictionary/', label: 'dictionary' }] : []),
 			...categories.filter((t) => used.has(t)).map((t) => ({ href: tagUrl(t), label: tagName(t) })),
 			...live
 				.filter((e) => e.kind === 'pages' && !e.meta.unlisted)
@@ -339,6 +350,23 @@
 		}
 	}
 
+	// affixes that make a word's other forms ("-a" a suffix, "a-" a prefix), kept in src/affixes.json
+	const AFFIXES = 'src/affixes.json';
+	let affixes = $state(/** @type {{ affix: string, pos: string }[]} */ (savedAffixes));
+	let affixesOpen = $state(false);
+	async function saveAffixes(/** @type {{ affix: string, pos: string }[]} */ next) {
+		if (!api) return;
+		try {
+			const sha = (await api.list()).find((f) => f.path === AFFIXES)?.sha;
+			await api.write(AFFIXES, utf8ToBase64(JSON.stringify(next, null, '\t') + '\n'), sha, 'cms: update affixes');
+			affixes = next;
+			affixesOpen = false;
+			flash('affixes saved. the site updates in a minute or two');
+		} catch (err) {
+			flash(/** @type {Error} */ (err).message);
+		}
+	}
+
 	async function refresh() {
 		if (!api) return;
 		loading = true;
@@ -360,8 +388,14 @@
 					})
 					.catch(() => {});
 			}
+			if (files.includes(AFFIXES)) {
+				api
+					.read(AFFIXES)
+					.then(({ text }) => (affixes = JSON.parse(text)))
+					.catch(() => {});
+			}
 			const known = new Map(entries.map((e) => [e.sha, e]));
-			const items = tree.filter((f) => /^src\/(posts|pages|redirects)\/[^/]+\.md$/.test(f.path) && !f.path.endsWith('/README.md'));
+			const items = tree.filter((f) => /^src\/(posts|pages|redirects|dictionary)\/[^/]+\.md$/.test(f.path) && !f.path.endsWith('/README.md'));
 			entries = await Promise.all(
 				items.map(async ({ path, sha: blob }) => {
 					const [, k, name] = /** @type {RegExpMatchArray} */ (path.match(/^src\/(\w+)\/([^/]+)\.md$/));
@@ -385,16 +419,16 @@
 	/** @param {Entry} entry */
 	async function open(entry, { ignorePartial = false } = {}) {
 		const body = await decrypt(entry.body).catch(() => entry.body);
-		const saved = { kind: entry.kind, name: entry.name, from: entry.name, isNew: false, sha: entry.sha, meta: { ...entry.meta, alias: [...entry.meta.alias], tags: [...(entry.meta.tags ?? [])] }, body };
+		const saved = { kind: entry.kind, name: entry.name, from: entry.name, isNew: false, sha: entry.sha, meta: { ...entry.meta, alias: [...entry.meta.alias], tags: [...(entry.meta.tags ?? [])], examples: [...(entry.meta.examples ?? [])], related: [...(entry.meta.related ?? [])] }, body };
 		baseline = contentOf(saved);
 		const partial = !ignorePartial && partials[`${entry.kind}/${entry.name}`];
-		editing = partial ? { ...partial, meta: { tags: [], ...partial.meta }, from: entry.name, isNew: false, sha: entry.sha } : saved;
+		editing = partial ? { ...partial, meta: { tags: [], examples: [], related: [], ...partial.meta }, from: entry.name, isNew: false, sha: entry.sha } : saved;
 	}
 
 	/** @param {string} key */
 	function openPartial(key) {
 		baseline = '';
-		editing = { ...partials[key], meta: { tags: [], ...partials[key].meta } };
+		editing = { ...partials[key], meta: { tags: [], examples: [], related: [], ...partials[key].meta } };
 	}
 
 	function discard() {
@@ -419,7 +453,7 @@
 			name: '',
 			from: '',
 			isNew: true,
-			meta: { title: '', description: '', image: '', date: kind === 'posts' ? today : '' /* only posts have a date (rss) */, draft: kind !== 'redirects', unlisted: false, featured: false, icon: '', alias: [], tags: [], redirect: '' },
+			meta: { title: '', description: '', image: '', date: kind === 'posts' ? today : '' /* only posts have a date (rss) */, draft: kind !== 'redirects', unlisted: false, featured: false, icon: '', alias: [], tags: [], redirect: '', pos: '', pronunciation: '', ...Object.fromEntries(LANGUAGES.map((l) => [l.code, ''])), examples: [], related: [] },
 			body: ''
 		};
 		// an untouched new item isn't worth keeping
@@ -438,6 +472,16 @@
 		const path = fileOf(k, name);
 		const renamed = !isNew && name !== from;
 		if ((isNew || renamed) && files.includes(path)) return flash(`${name} already exists`);
+		// a word and a page (or short link) can't share an address
+		if (k !== 'posts') {
+			const mine = k === 'dictionary' ? [`/${name}/`] : addresses(current).map((a) => `${a}/`.replace(/\/\/$/, '/'));
+			const reserved = mine.find((a) => RESERVED.some((r) => a === r || (r !== '/post/' && a.startsWith(r))));
+			if (reserved) return flash(`${reserved} is used by the site itself, pick another name`);
+			const other = entries.find(
+				(e) => e.kind !== 'posts' && (e.kind === 'dictionary') !== (k === 'dictionary') && addresses(e).some((a) => mine.includes(`${a}/`.replace(/\/\/$/, '/')))
+			);
+			if (other) return flash(`can't save: ${mine.join(' ')} is already used by ${other.kind === 'dictionary' ? 'the word' : other.kind.slice(0, -1)} "${other.meta.title || other.name}"`);
+		}
 		try {
 			// redirects have no body to encrypt
 			const file = serialize(k === 'posts' ? current.meta : { ...current.meta, date: '' }, k === 'redirects' ? '' : await encrypt(current.body));
@@ -688,7 +732,7 @@
 	{@const all = entries.filter((e) => e.kind === k)}
 	{@const items = all
 		.filter((e) => k === 'redirects' || shown(k, e))
-		.sort((a, b) => (k === 'posts' ? -1 : 1) * a.name.localeCompare(b.name, 'en', { numeric: true }))
+		.sort((a, b) => (k === 'posts' ? -1 : 1) * (k === 'dictionary' ? (a.meta.title || a.name).localeCompare(b.meta.title || b.name) : a.name.localeCompare(b.name, 'en', { numeric: true })))
 		.sort((a, b) => (k !== 'redirects' && filters[k].first ? rank(a) - rank(b) : 0))}
 	{@const grouped = k !== 'redirects' && filters[k].first}
 	{@const filtering = k !== 'redirects' && Object.entries(filters[k]).some(([x, v]) => v && x !== 'first')}
@@ -713,7 +757,7 @@
 				<CloudAlert size={16} />{all.filter(isLocal).length + newPartials.filter(([, p]) => p.kind === k).length}
 			</button>
 			<span class="gap"></span>
-			{#if f}
+			{#if k !== 'dictionary'}
 				<button class:on={f.first} title="group: drafts and unsaved first" aria-pressed={f.first} onclick={() => (f.first = !f.first)}>
 					<ArrowUpNarrowWide size={16} />
 				</button>
@@ -766,7 +810,7 @@
 							<span class="preview">
 								{#if entry.meta.image}
 									<img src={resolve(entry.meta.image)} alt="" loading="lazy" />
-								{:else if entry.kind === 'posts'}<Feather size={20} />{:else}<FileIcon size={20} />{/if}
+								{:else if entry.kind === 'posts'}<Feather size={20} />{:else if entry.kind === 'dictionary'}<BookA size={20} />{:else}<FileIcon size={20} />{/if}
 							</span>
 						{/if}
 						{#if entry.kind === 'redirects'}
@@ -789,7 +833,7 @@
 									{/if}
 									{entry.meta.title || entry.name}
 								</span>
-								<small>{addresses(entry).join(' • ')}</small>
+								<small>{entry.kind === 'dictionary' ? [entry.meta.pos, entry.meta.description].filter(Boolean).join(' · ') || addresses(entry)[0] : addresses(entry).join(' • ')}</small>
 							</span>
 						{/if}
 						<!-- unsaved, unlisted and draft, stacked -->
@@ -829,7 +873,7 @@
 	{#if !api}
 		<Login onlogin={login} />
 	{:else if editing}
-		<Editor bind:item={editing} {images} {resolve} {ask} {manage} {alphabet} {categories} tagsInUse={allTags.map(([t]) => t)} onsave={save} onupload={upload} ondelete={remove} onback={() => (editing = null)} partial={!!partials[keyOf(editing)]} ondiscard={discard} />
+		<Editor bind:item={editing} {affixes} words={entries.filter((e) => e.kind === 'dictionary' && !e.meta.draft).map((e) => e.meta.title || e.name)} {images} {resolve} {ask} {manage} {alphabet} {categories} tagsInUse={allTags.map(([t]) => t)} onsave={save} onupload={upload} ondelete={remove} onback={() => (editing = null)} partial={!!partials[keyOf(editing)]} ondiscard={discard} />
 	{:else}
 		<header>
 			<div class="top">
@@ -868,6 +912,10 @@
 		<AlphabetDialog setup={alphabet} onsave={saveAlphabet} onclose={() => (alphabetOpen = false)} />
 	{/if}
 
+	{#if affixesOpen}
+		<AffixesDialog {affixes} onsave={saveAffixes} onclose={() => (affixesOpen = false)} />
+	{/if}
+
 	{#if dialog}
 		<ImageDialog {...dialog.props} {images} {resolve} ondone={dialog.done} />
 	{/if}
@@ -878,12 +926,12 @@
 {#if api && !editing}
 	<Fabs onmenu={() => (menu = true)} target={scrollers[kind]}>
 		{#snippet extra()}
-			{#if !editing && progress > 2.3}
+			{#if !editing && progress > indexOf('media') - 0.7}
 				<!-- fades in over the last 70% of the slide to the media tab -->
 				<button
 					class="round create paste"
-					style:opacity={Math.min(1, (progress - 2.3) / 0.7)}
-					style:pointer-events={progress > 2.65 ? null : 'none'}
+					style:opacity={Math.min(1, (progress - indexOf('media') + 0.7) / 0.7)}
+					style:pointer-events={progress > indexOf('media') - 0.35 ? null : 'none'}
 					onclick={pasteMedia}
 					aria-label="paste media"
 				>
@@ -891,7 +939,7 @@
 				</button>
 			{/if}
 			{#if !editing}
-				<button class="round create" onclick={create} aria-label={kind === 'media' ? 'upload media' : `new ${kind.slice(0, -1)}`}>
+				<button class="round create" onclick={create} aria-label={kind === 'media' ? 'upload media' : kind === 'dictionary' ? 'new word' : `new ${kind.slice(0, -1)}`}>
 					<CreateIcon {kind} />
 				</button>
 			{/if}
@@ -932,6 +980,13 @@
 				<button class="entry" onclick={() => ((menu = false), (alphabetOpen = true))}>
 					<BeeIcon size={24} strokeWidth={1.75} />
 					{alphabetName}
+				</button>
+			</li>
+			<li>
+				<!-- the suffixes and prefixes that make each dictionary word's other forms -->
+				<button class="entry" onclick={() => ((menu = false), (affixesOpen = true))}>
+					<Puzzle size={24} strokeWidth={1.75} />
+					affixes
 				</button>
 			</li>
 		</ul>
@@ -981,9 +1036,10 @@
 
 	.top {
 		display: flex;
+		flex-wrap: wrap;
 		align-items: center;
 		justify-content: space-between;
-		gap: 1rem;
+		gap: 0.75rem 1rem;
 	}
 
 	.kinds {
