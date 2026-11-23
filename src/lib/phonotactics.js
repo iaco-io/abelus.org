@@ -1,18 +1,39 @@
 // phonotactics: whether a word fits the language's sound rules (src/phonotactics.json, edited in the cms).
-// letter groups (I, V, …) and a syllable made of them, like "(I / C₁ C₂) V (M / F)": a ( … / … ) is optional,
-// one of its choices. a word is one or more syllables in a row; a group can be kept to the middle or end of words
+// letter groups (I, V, …) and a syllable made of them, like σ → ({I, C₁C₂}) V ({M, F}). a word is one or more
+// syllables in a row; a group can be kept to the middle of words (_.) or their end (_#)
 
 /** @typedef {{ name: string, letters: string, where: 'anywhere' | 'middle' | 'end' }} Group */
 /** @typedef {{ groups: Group[], syllable: string }} Rules */
 
-/** every way a syllable can be spelled in groups: "(I / C₁ C₂) V" gives [V], [I, V], [C₁, C₂, V] */
-export function syllables(/** @type {string} */ text, /** @type {string[]} */ names) {
-	const tokens = text.match(/[()/]|[^\s()/]+/g) ?? [];
+/**
+ * every way a syllable can be spelled in groups. the syllable is written like σ → ({I, C₁C₂}) V ({M, F}):
+ * ( … ) is optional, { a, b } is one of them (required), "σ →" in front is optional, and group names can be
+ * written together (C₁C₂)
+ * @param {string} text @param {string[]} names
+ */
+export function syllables(text, names) {
+	const source = text.replace(/^\s*σ\s*(→|->|=)?\s*/, '');
+	// split into ( ) { } , and group names, the longest name that fits first
+	const byLength = [...names].sort((a, b) => b.length - a.length);
+	/** @type {string[]} */
+	const tokens = [];
+	for (let at = 0; at < source.length; ) {
+		const c = source[at];
+		if (/\s/.test(c)) at++;
+		else if ('(){},'.includes(c)) (tokens.push(c), at++);
+		else {
+			const name = byLength.find((n) => source.startsWith(n, at));
+			if (!name) throw new Error(`no letter group called ${source.slice(at).match(/^[^\s(){},]+/)?.[0]}`);
+			tokens.push(name);
+			at += name.length;
+		}
+	}
 	let i = 0;
+	const stops = [')', '}', ','];
 	/** @returns {string[][]} */
 	const sequence = () => {
 		let all = [/** @type {string[]} */ ([])];
-		while (i < tokens.length && tokens[i] !== ')' && tokens[i] !== '/') {
+		while (i < tokens.length && !stops.includes(tokens[i])) {
 			const part = item();
 			all = all.flatMap((a) => part.map((b) => [...a, ...b]));
 		}
@@ -21,14 +42,12 @@ export function syllables(/** @type {string} */ text, /** @type {string[]} */ na
 	/** @returns {string[][]} */
 	const item = () => {
 		const t = tokens[i++];
-		if (t === '(') {
-			let choices = sequence();
-			while (tokens[i] === '/') (i++, (choices = [...choices, ...sequence()]));
-			if (tokens[i++] !== ')') throw new Error('a ( is not closed');
-			return [[], ...choices];
-		}
-		if (!names.includes(t)) throw new Error(`no letter group called ${t}`);
-		return [[t]];
+		if (t !== '(' && t !== '{') return [[t]];
+		const close = t === '(' ? ')' : '}';
+		let choices = sequence();
+		while (tokens[i] === ',') (i++, (choices = [...choices, ...sequence()]));
+		if (tokens[i++] !== close) throw new Error(`a ${t} is not closed`);
+		return t === '(' ? [[], ...choices] : choices;
 	};
 	const all = sequence();
 	if (i < tokens.length) throw new Error(`unexpected ${tokens[i]}`);
@@ -84,6 +103,12 @@ function checkWord(word, rules) {
  */
 export function check(text, rules) {
 	if (!rules?.groups.length || !rules.syllable.trim()) return null;
+	// a syllable that can't be read checks nothing (the phonotactics popup says what's wrong)
+	try {
+		syllables(rules.syllable, rules.groups.map((g) => g.name));
+	} catch {
+		return null;
+	}
 	const words = text.replace(/<\/?(tp|al)>/g, '').toLowerCase().split(/[\s-]+/).filter(Boolean);
 	if (!words.length) return null;
 	const results = words.map((w) => {

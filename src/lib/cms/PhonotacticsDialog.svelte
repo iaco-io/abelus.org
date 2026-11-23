@@ -1,7 +1,7 @@
 <script>
 	// edits the phonotactics: letter groups (each kept anywhere, to the middle of words, or to their end) and the
-	// syllable they make, like "(I / C₁ C₂) V (M / F)". a word to try shows the result as it's edited
-	import { Save, Undo2, Plus, X } from '@lucide/svelte';
+	// syllable they make, like σ → ({I, C₁C₂}) V ({M, F}). a word to try shows the result as it's edited
+	import { Save, Undo2, Plus, X, ChevronUp, ChevronDown } from '@lucide/svelte';
 	import { syllables, check } from '../phonotactics.js';
 
 	/**
@@ -36,6 +36,12 @@
 	});
 	const tried = $derived(problem || !sample.trim() ? null : check(sample, clean()));
 
+	function move(/** @type {number} */ i, /** @type {number} */ step) {
+		const j = i + step;
+		if (j < 0 || j >= draft.groups.length) return;
+		[draft.groups[i], draft.groups[j]] = [draft.groups[j], draft.groups[i]];
+	}
+
 	async function save() {
 		saving = true;
 		try {
@@ -67,10 +73,12 @@
 				<div class="row">
 					<input class="name" bind:value={g.name} placeholder="V" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="group name" />
 					<input bind:value={g.letters} placeholder="a e i o u" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="letters" />
+					<button class="icon" aria-label="move up" title="move up" disabled={i === 0} onclick={() => move(i, -1)}><ChevronUp size={18} /></button>
+					<button class="icon" aria-label="move down" title="move down" disabled={i === draft.groups.length - 1} onclick={() => move(i, 1)}><ChevronDown size={18} /></button>
 					<button class="icon" aria-label="remove group" onclick={() => draft.groups.splice(i, 1)}><X size={16} /></button>
 				</div>
 				<div class="where" role="radiogroup" aria-label="where in a word">
-					{#each /** @type {const} */ ([['anywhere', 'anywhere'], ['middle', 'mid-word only'], ['end', 'word end only']]) as [w, label]}
+					{#each /** @type {const} */ ([['anywhere', 'anywhere'], ['middle', 'mid-word · _.'], ['end', 'word end · _#']]) as [w, label]}
 						<button role="radio" aria-checked={g.where === w} class:on={g.where === w} onclick={() => (g.where = w)}>{label}</button>
 					{/each}
 				</div>
@@ -80,8 +88,8 @@
 	</div>
 
 	<label class="field">
-		<span>syllable · ( a / b c ) is optional, one of them</span>
-		<input bind:value={draft.syllable} placeholder="(I / C₁ C₂) V (M / F)" autocapitalize="off" autocorrect="off" spellcheck="false" />
+		<span>syllable · ( ) optional, &#123;a, b&#125; one of them</span>
+		<input bind:value={draft.syllable} placeholder="σ → (&#123;I, C₁C₂&#125;) V (&#123;M, F&#125;)" autocapitalize="off" autocorrect="off" spellcheck="false" />
 	</label>
 	{#if problem}<small class="bad">{problem}</small>{/if}
 
@@ -194,6 +202,11 @@
 		color: var(--muted);
 		background: none;
 		cursor: pointer;
+	}
+
+	.icon:disabled {
+		opacity: 0.3;
+		cursor: default;
 	}
 
 	.add {
