@@ -885,7 +885,7 @@
 	{:else}
 		<header>
 			<div class="top">
-				<h1>abelus.org <small>v {__VERSION__}</small></h1>
+				<h1>abelus <small>v {__VERSION__}</small></h1>
 				<div class="kinds glass" role="tablist" aria-label="sections" style:--progress={progress}>
 					<span class="thumb"></span>
 					{#each KINDS as { kind: k, icon: Icon }}
@@ -1047,7 +1047,7 @@
 		flex-wrap: wrap;
 		align-items: center;
 		justify-content: space-between;
-		gap: 0.75rem 1rem;
+		gap: 0.75rem;
 	}
 
 	.kinds {
