@@ -65,7 +65,7 @@
 						{/each}
 					</div>
 					<input class="affix" bind:value={a.affix} oninput={() => typed(a)} placeholder={a.type === 'prefix' ? 'a-' : '-a'} autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="affix" />
-					<small class="sample">{filled(a) ? `“${attach(a, 'word')}”` : ''}</small>
+					<small class="sample">{filled(a) ? `“${attach(a, 'abel')}”` : ''}</small>
 					<button class="icon" aria-label="remove affix" onclick={() => draft.splice(i, 1)}><X size={16} /></button>
 				</div>
 				<div class="row">
