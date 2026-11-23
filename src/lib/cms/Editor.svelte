@@ -730,7 +730,13 @@
 			{@const forms = wordInfo(item.meta, affixes).forms}
 			<label>
 				<span>part of speech</span>
-				<input bind:value={item.meta.pos} placeholder="noun" list="parts" autocapitalize="off" />
+				<!-- the usual ones, those the affixes make, and the word's own if it's another -->
+				<select bind:value={item.meta.pos}>
+					<option value="">—</option>
+					{#each [...new Set([...PARTS, ...affixes.map((a) => a.pos.trim()).filter(Boolean), item.meta.pos].filter(Boolean))] as p (p)}
+						<option value={p}>{p}</option>
+					{/each}
+				</select>
 			</label>
 			<label>
 				<span>pronunciation</span>
@@ -770,9 +776,6 @@
 					<button class="pill add" onclick={() => item.meta.related.push('')}><Plus size={16} /> word</button>
 				</div>
 			</div>
-			<datalist id="parts">
-				{#each PARTS as p}<option value={p}></option>{/each}
-			</datalist>
 			<datalist id="dictionary-words">
 				{#each words as w}<option value={w}></option>{/each}
 			</datalist>
