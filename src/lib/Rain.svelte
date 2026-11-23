@@ -24,7 +24,7 @@
 			navigator.mediaSession.metadata = new MediaMetadata({
 				title: 'rain',
 				artist: 'abelus.org',
-				artwork: [{ src: '/icon-512.png', sizes: '512x512', type: 'image/png' }]
+				artwork: [{ src: '/bee-512.png', sizes: '512x512', type: 'image/png' }]
 			});
 			navigator.mediaSession.setActionHandler('play', () => audio.play());
 			navigator.mediaSession.setActionHandler('pause', () => audio.pause());
