@@ -122,13 +122,6 @@
 		progress = i;
 	});
 
-	/** @param {Section} k */
-	function show(k) {
-		kind = k;
-		editing = null;
-		menu = false;
-		go(k);
-	}
 
 	// each list scrolls on its own and keeps its place, also after a trip to the editor
 	/** @type {Record<string, HTMLElement | undefined>} */
@@ -686,8 +679,12 @@
 			});
 		} else logout();
 
-		// errors show as a message, so a problem on a phone can be read (and reported) instead of failing silently
-		const report = (/** @type {any} */ e) => flash(`error: ${e.reason?.message ?? e.reason ?? e.message ?? e}`);
+		// errors show as a message, so a problem on a phone can be read (and reported) instead of failing silently.
+		// errors from the browser's own scripts (no details, just "Script error.") aren't the cms's, so they're skipped
+		const report = (/** @type {any} */ e) => {
+			if (e instanceof ErrorEvent && !e.error) return;
+			flash(`error: ${e.reason?.message ?? e.reason ?? e.message ?? e}`);
+		};
 		addEventListener('error', report);
 		addEventListener('unhandledrejection', report);
 
@@ -963,14 +960,6 @@
 					<Lock size={24} strokeWidth={1.75} /> lock
 				</button>
 			</li>
-			{#each KINDS as { kind: k, icon: Icon }}
-				<li>
-					<button class="entry" class:active={kind === k && !editing} onclick={() => show(k)}>
-						<Icon size={24} strokeWidth={1.75} />
-						{k}
-					</button>
-				</li>
-			{/each}
 			<li>
 				<button class="entry" onclick={() => ((menu = false), (tagsOpen = true))}>
 					<Tag size={24} strokeWidth={1.75} />
