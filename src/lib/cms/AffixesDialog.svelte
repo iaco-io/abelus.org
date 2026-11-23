@@ -1,25 +1,34 @@
 <script>
-	// edits the affixes that make a dictionary word's other forms: "-a" adds a to the end (suffix),
-	// "a-" to the start (prefix). each word gets one form for every affix of another part of speech
+	// edits the affixes that make a dictionary word's other forms: a prefix goes before the word, a suffix after it.
+	// spaces are kept ("a " makes "a word", a separate particle); a hyphen on the word's side means attached.
+	// each word gets one form for every affix of another part of speech
 	import { Save, Undo2, Plus, X } from '@lucide/svelte';
-	import { PARTS } from '../dictionary.js';
+	import { PARTS, typeOf, attach } from '../dictionary.js';
 
 	/**
-	 * @typedef {{ affix: string, pos: string }} Affix
+	 * @typedef {import('../dictionary.js').Affix} Affix
 	 * @type {{ affixes: Affix[], onsave: (affixes: Affix[]) => Promise<void>, onclose: () => void }}
 	 */
 	let { affixes, onsave, onclose } = $props();
 
 	// a copy to edit; nothing changes until saved
-	let draft = $state(affixes.map((a) => ({ ...a })));
-	const valid = (/** @type {string} */ a) => /^-[^-\s]+$|^[^-\s]+-$/.test(a.trim());
-	const bad = $derived(draft.some((a) => (a.affix.trim() || a.pos.trim()) && (!valid(a.affix) || !a.pos.trim())));
+	let draft = $state(affixes.map((a) => ({ ...a, type: typeOf(a) })));
+	// an affix needs a letter, and a part of speech
+	const filled = (/** @type {Affix} */ a) => !!a.affix.replace(/[-\s]/g, '');
+	const bad = $derived(draft.some((a) => (filled(a) || a.pos.trim()) && (!filled(a) || !a.pos.trim())));
+
+	// typing a leading - or space makes it a suffix, a trailing one a prefix
+	function typed(/** @type {Affix} */ a) {
+		if (/^[-\s]/.test(a.affix)) a.type = 'suffix';
+		else if (/[-\s]$/.test(a.affix)) a.type = 'prefix';
+	}
 	let saving = $state(false);
 
 	async function save() {
 		saving = true;
 		try {
-			await onsave(draft.map((a) => ({ affix: a.affix.trim(), pos: a.pos.trim() })).filter((a) => a.affix && a.pos));
+			// the affix as typed, spaces and all
+			await onsave(draft.filter((a) => filled(a) && a.pos.trim()).map((a) => ({ affix: a.affix, pos: a.pos.trim(), type: a.type })));
 		} finally {
 			saving = false;
 		}
@@ -38,17 +47,28 @@
 
 <dialog bind:this={dialog} class="glass" oncancel={(e) => (e.preventDefault(), onclose())} onclick={outside}>
 	<h2>affixes</h2>
-	<p class="note">"-a" goes at the end of a word, "a-" at the start. each word gets a form for every part of speech it isn't.</p>
+	<p class="note">a prefix goes before the word, a suffix after it. with a space it stays a separate particle; with a hyphen, or nothing, it's attached. each word gets a form for every part of speech it isn't.</p>
 	<div class="rows">
 		{#each draft, i}
-			<div class="row">
-				<input class="affix" class:wrong={draft[i].affix.trim() && !valid(draft[i].affix)} bind:value={draft[i].affix} placeholder="-a" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="affix" />
-				<span>makes</span>
-				<input bind:value={draft[i].pos} placeholder="adjective" list="parts" autocapitalize="off" aria-label="part of speech" />
-				<button class="icon" aria-label="remove affix" onclick={() => draft.splice(i, 1)}><X size={16} /></button>
+			{@const a = draft[i]}
+			<div class="affix-card">
+				<div class="row">
+					<div class="type" role="radiogroup" aria-label="prefix or suffix">
+						{#each /** @type {const} */ (['prefix', 'suffix']) as t}
+							<button role="radio" aria-checked={a.type === t} class:on={a.type === t} onclick={() => (a.type = t)}>{t}</button>
+						{/each}
+					</div>
+					<input class="affix" bind:value={a.affix} oninput={() => typed(a)} placeholder={a.type === 'prefix' ? 'a-' : '-a'} autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="affix" />
+					<small class="sample">{filled(a) ? `“${attach(a, 'word')}”` : ''}</small>
+					<button class="icon" aria-label="remove affix" onclick={() => draft.splice(i, 1)}><X size={16} /></button>
+				</div>
+				<label class="row">
+					<span>makes</span>
+					<input bind:value={a.pos} placeholder="adjective" list="parts" autocapitalize="off" aria-label="part of speech" />
+				</label>
 			</div>
 		{/each}
-		<button class="pill add" onclick={() => draft.push({ affix: '', pos: '' })}><Plus size={16} /> affix</button>
+		<button class="pill add" onclick={() => draft.push({ affix: '', pos: '', type: 'suffix' })}><Plus size={16} /> affix</button>
 	</div>
 	<datalist id="parts">
 		{#each PARTS as p}<option value={p}></option>{/each}
@@ -90,8 +110,17 @@
 
 	.rows {
 		display: grid;
-		gap: 0.5rem;
+		gap: 0.6rem;
 		justify-items: start;
+	}
+
+	.affix-card {
+		display: grid;
+		gap: 0.45rem;
+		width: 100%;
+		padding: 0.5rem;
+		border-radius: 1rem;
+		background: color-mix(in srgb, var(--bg) 60%, transparent);
 	}
 
 	.row {
@@ -112,8 +141,44 @@
 	}
 
 	.row .affix {
-		flex: 0 0 5rem;
+		flex: 0 0 4.2rem;
 		text-align: center;
+		white-space: pre;
+	}
+
+	.type {
+		display: flex;
+		flex: none;
+		padding: 0.2rem;
+		border-radius: 999px;
+		background: var(--panel);
+	}
+
+	.type button {
+		padding: 0.35rem 0.5rem;
+		border: 0;
+		border-radius: 999px;
+		font: inherit;
+		font-size: 0.78rem;
+		color: var(--muted);
+		background: none;
+		cursor: pointer;
+	}
+
+	.type button.on {
+		color: var(--fg);
+		background: var(--bg);
+		box-shadow: 0 0 6px var(--shadow-soft);
+	}
+
+	.sample {
+		flex: 1;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		font-size: 0.85rem;
+		color: var(--muted);
+		white-space: pre;
 	}
 
 	.icon {
@@ -130,10 +195,6 @@
 		height: auto;
 		padding: 0.7rem 1rem;
 		box-shadow: none;
-	}
-
-	.wrong {
-		outline: 2px solid #c0504d;
 	}
 
 	.buttons {
