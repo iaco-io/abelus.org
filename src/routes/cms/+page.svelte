@@ -20,7 +20,7 @@
 	import TagsDialog from '#lib/cms/TagsDialog.svelte';
 	import DayClock from '#lib/DayClock.svelte';
 	import Thumb from '#lib/cms/Thumb.svelte';
-	import BeeIcon from '#lib/cms/BeeIcon.svelte';
+	import BeeIcon from '#lib/BeeIcon.svelte';
 	import AlphabetDialog from '#lib/cms/AlphabetDialog.svelte';
 	import { setAlphabet, alphabet as inAlphabet } from '#lib/tp.js';
 	import savedAlphabet from '../../alphabet.json';

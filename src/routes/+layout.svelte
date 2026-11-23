@@ -1,7 +1,8 @@
 <script>
 	import '../app.css';
 	import { onMount } from 'svelte';
-	import { Waves, Newspaper } from '@lucide/svelte';
+	import { Newspaper } from '@lucide/svelte';
+	import BeeIcon from '#lib/BeeIcon.svelte';
 	import { tagUrl } from '#lib/tags.js';
 	import { external, destination } from '#lib/links.js';
 	import Menu from '#lib/Menu.svelte';
@@ -22,7 +23,7 @@
 	};
 	const links = $derived(
 		[
-			{ href: '/', label: 'abelus.org', icon: Waves },
+			{ href: '/', label: 'abelus.org', icon: BeeIcon },
 			{ href: '/#latest', label: 'latest', icon: Newspaper },
 			...(data.categories ?? []).map(({ tag, name, icon }) => ({ href: tagUrl(tag), label: name, picture: icon })),
 			...(data.pages ?? []).map((p) => ({ href: p.url, label: p.title, picture: p.icon }))
