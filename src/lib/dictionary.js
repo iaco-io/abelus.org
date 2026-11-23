@@ -51,7 +51,11 @@ export function wordInfo(/** @type {Record<string, any>} */ meta, /** @type {Aff
 		pos,
 		pronunciation: String(meta.pronunciation ?? '').trim(),
 		translations: LANGUAGES.map((l) => ({ ...l, words: list(meta[l.code]) })).filter((l) => l.words.length),
-		forms: forms(meta.title ?? '', pos, affixes),
+		// each form with its own translations, kept by its part of speech: forms: {"verb": {"en": "to water"}}
+		forms: forms(meta.title ?? '', pos, affixes).map((f) => ({
+			...f,
+			translations: LANGUAGES.map((l) => ({ ...l, words: list(meta.forms?.[f.pos]?.[l.code]) })).filter((l) => l.words.length)
+		})),
 		examples: [meta.examples ?? []].flat().map((x) => String(x).trim()).filter(Boolean),
 		related: list(meta.related)
 	};

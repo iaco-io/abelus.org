@@ -34,7 +34,7 @@
 		candidates.push(...[w.title, ...w.forms].map((text) => ({ text, lang: '' })));
 		// the picked language first, so its match is the one shown when several match as well
 		for (const { code } of [...LANGUAGES].sort((a, b) => +(b.code === language) - +(a.code === language))) {
-			candidates.push(...(w.translations[code] ?? []).map((text) => ({ text, lang: code })));
+			candidates.push(...[...(w.translations[code] ?? []), ...(w.formTranslations?.[code] ?? [])].map((text) => ({ text, lang: code })));
 		}
 		let best = { rank: 3, lang: '', text: '' };
 		for (const c of candidates) {

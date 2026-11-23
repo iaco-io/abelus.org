@@ -6,7 +6,7 @@ import { LANGUAGES } from './dictionary.js';
 // properties at the top of each .md file, in this order
 export const FIELDS = ['title', 'description', 'image', 'date', 'draft', 'redirect', 'alias', 'tags', 'unlisted', 'icon', 'featured',
 	// dictionary words only
-	'pos', 'pronunciation', ...LANGUAGES.map((l) => l.code), 'examples', 'related'];
+	'pos', 'pronunciation', ...LANGUAGES.map((l) => l.code), 'examples', 'related', 'forms'];
 
 // addresses the site itself uses: nothing else may take them
 export const RESERVED = ['/cms/', '/preview/', '/rss.xml/', '/post/', '/_app/', '/dictionary/'];
@@ -17,6 +17,12 @@ const unquote = (/** @type {string} */ value) => value.trim().replace(QUOTES, '$
 /** `[a, 'b']` becomes a list, anything else a string */
 function value(/** @type {string} */ raw) {
 	const v = raw.trim();
+	// {…} is json, for properties with parts (a dictionary word's form translations)
+	if (v.startsWith('{') && v.endsWith('}')) {
+		try {
+			return JSON.parse(v);
+		} catch {}
+	}
 	if (v.startsWith('[') && v.endsWith(']')) {
 		return v.slice(1, -1).split(',').map(unquote).filter(Boolean);
 	}
@@ -47,16 +53,26 @@ export function parse(/** @type {string} */ file) {
 	return { meta, body: match[2] };
 }
 
+/** an object without its empty parts (or undefined, if nothing is left); anything else as it is */
+function prune(/** @type {any} */ v) {
+	if (!v || typeof v !== 'object' || Array.isArray(v)) return v;
+	const kept = Object.entries(v)
+		.map(([k, x]) => [k, typeof x === 'string' ? x.trim() : prune(x)])
+		.filter(([, x]) => x !== undefined && x !== '');
+	return kept.length ? Object.fromEntries(kept) : undefined;
+}
+
 /** @param {Record<string, any>} meta @param {string} body */
 export function serialize(meta, body) {
 	const format = (/** @type {string} */ key, /** @type {any} */ v) =>
 		Array.isArray(v)
 			? `${key}:\n${v.map((x) => `  - ${x}`).join('\n')}`
-			: `${key}: ${String(v).replace(/\s*\n\s*/g, ' ')}`;
-	const lines = FIELDS.filter((key) => {
-		const v = meta[key];
-		return v !== undefined && v !== '' && v !== false && !(Array.isArray(v) && !v.length);
-	}).map((key) => format(key, meta[key]));
+			: typeof v === 'object'
+				? `${key}: ${JSON.stringify(v)}`
+				: `${key}: ${String(v).replace(/\s*\n\s*/g, ' ')}`;
+	const lines = FIELDS.map((key) => /** @type {const} */ ([key, prune(meta[key])]))
+		.filter(([, v]) => v !== undefined && v !== '' && v !== false && !(Array.isArray(v) && !v.length))
+		.map(([key, v]) => format(key, v));
 	return `---\n${lines.join('\n')}\n---\n${body.trim() ? `${body.trim()}\n` : ''}`;
 }
 

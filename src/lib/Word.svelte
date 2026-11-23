@@ -27,9 +27,14 @@
 	{#if word.forms.length}
 		<h2>forms</h2>
 		<dl class="glass">
-			{#each word.forms as { pos, form }}
+			{#each word.forms as { pos, form, translations }}
 				<dt>{pos}</dt>
-				<dd>{form}</dd>
+				<dd>
+					{form}
+					{#if translations?.length}
+						<small>{translations.map((t) => `${t.name}: ${t.words.join(', ')}`).join(' · ')}</small>
+					{/if}
+				</dd>
 			{/each}
 		</dl>
 	{/if}
@@ -89,6 +94,12 @@
 
 	dd {
 		margin: 0;
+	}
+
+	dd small {
+		display: block;
+		font-size: 0.85rem;
+		color: var(--muted);
 	}
 
 	.examples {

@@ -44,6 +44,14 @@
 	const short = $derived(item.kind === 'redirects');
 	// dictionary words: no tags, aliases or redirect, but translations and the rest
 	const isWord = $derived(item.kind === 'dictionary');
+	// a form's translations, kept by its part of speech: item.meta.forms = { verb: { en: 'to water' } }
+	const formTr = (/** @type {string} */ pos, /** @type {string} */ code) => item.meta.forms?.[pos]?.[code] ?? '';
+	function setFormTr(/** @type {string} */ pos, /** @type {string} */ code, /** @type {string} */ value) {
+		item.meta.forms ??= {};
+		item.meta.forms[pos] ??= {};
+		item.meta.forms[pos][code] = value;
+	}
+
 	// whether the word, and its forms, fit the phonotactics (set in the menu)
 	const sound = $derived(isWord ? check(item.meta.title, phonotactics) : null);
 	const offForms = $derived(
@@ -763,8 +771,27 @@
 				</label>
 			{/each}
 			<div class="wide">
-				<span class="label">forms · made by the affixes (menu)</span>
-				<small class="note">{forms.length ? forms.map((f) => `${f.pos}: ${f.form}`).join(' · ') : 'none yet: pick a part of speech and add affixes in the menu'}</small>
+				<span class="label">forms · made by the affixes (menu), each with its translations</span>
+				{#if forms.length}
+					<div class="forms">
+						{#each forms as f (f.pos)}
+							{@const filled = LANGUAGES.filter((l) => formTr(f.pos, l.code).trim()).length}
+							<details>
+								<summary><em>{f.pos}</em> {f.form} <small>{filled ? `${filled} ${filled === 1 ? 'translation' : 'translations'}` : 'no translations'}</small></summary>
+								<div class="form-langs">
+									{#each LANGUAGES as { code, name } (code)}
+										<label>
+											<span>{name}</span>
+											<input value={formTr(f.pos, code)} oninput={(e) => setFormTr(f.pos, code, e.currentTarget.value)} placeholder="word, another word" lang={code} />
+										</label>
+									{/each}
+								</div>
+							</details>
+						{/each}
+					</div>
+				{:else}
+					<small class="note">none yet: pick a part of speech and add affixes in the menu</small>
+				{/if}
 			</div>
 			<div class="wide">
 				<span class="label">examples</span>
@@ -1258,6 +1285,48 @@
 	.sound.off,
 	.sound .off {
 		color: #c0504d;
+	}
+
+	.forms {
+		display: grid;
+		gap: 0.5rem;
+	}
+
+	.forms details {
+		padding: 0.6rem 0.9rem;
+		border-radius: 1rem;
+		background: var(--glass);
+		border: 1px solid var(--glass-edge);
+	}
+
+	.forms summary {
+		cursor: pointer;
+	}
+
+	.forms summary em {
+		color: var(--muted);
+		margin-right: 0.4rem;
+	}
+
+	.forms summary small {
+		margin-left: 0.4rem;
+		color: var(--muted);
+	}
+
+	.form-langs {
+		display: grid;
+		gap: 0.6rem;
+		margin-top: 0.75rem;
+	}
+
+	.form-langs label {
+		display: grid;
+		gap: 0.3rem;
+	}
+
+	.form-langs span {
+		font-size: 0.85rem;
+		color: var(--muted);
 	}
 
 	.example {

@@ -188,7 +188,9 @@
 		pronunciation: m.pronunciation ?? '',
 		...Object.fromEntries(LANGUAGES.map((l) => [l.code, wordList(m[l.code]).join(', ')])),
 		examples: [m.examples ?? []].flat(),
-		related: wordList(m.related)
+		related: wordList(m.related),
+		// translations of each form, by its part of speech: { verb: { en: 'to water' } }
+		forms: m.forms && typeof m.forms === 'object' && !Array.isArray(m.forms) ? m.forms : {}
 	});
 
 	const images = $derived(
@@ -437,16 +439,16 @@
 	/** @param {Entry} entry */
 	async function open(entry, { ignorePartial = false } = {}) {
 		const body = await decrypt(entry.body).catch(() => entry.body);
-		const saved = { kind: entry.kind, name: entry.name, from: entry.name, isNew: false, sha: entry.sha, meta: { ...entry.meta, alias: [...entry.meta.alias], tags: [...(entry.meta.tags ?? [])], examples: [...(entry.meta.examples ?? [])], related: [...(entry.meta.related ?? [])] }, body };
+		const saved = { kind: entry.kind, name: entry.name, from: entry.name, isNew: false, sha: entry.sha, meta: { ...entry.meta, alias: [...entry.meta.alias], tags: [...(entry.meta.tags ?? [])], examples: [...(entry.meta.examples ?? [])], related: [...(entry.meta.related ?? [])], forms: JSON.parse(JSON.stringify(entry.meta.forms ?? {})) }, body };
 		baseline = contentOf(saved);
 		const partial = !ignorePartial && partials[`${entry.kind}/${entry.name}`];
-		editing = partial ? { ...partial, meta: { tags: [], examples: [], related: [], ...partial.meta }, from: entry.name, isNew: false, sha: entry.sha } : saved;
+		editing = partial ? { ...partial, meta: { tags: [], examples: [], related: [], forms: {}, ...partial.meta }, from: entry.name, isNew: false, sha: entry.sha } : saved;
 	}
 
 	/** @param {string} key */
 	function openPartial(key) {
 		baseline = '';
-		editing = { ...partials[key], meta: { tags: [], examples: [], related: [], ...partials[key].meta } };
+		editing = { ...partials[key], meta: { tags: [], examples: [], related: [], forms: {}, ...partials[key].meta } };
 	}
 
 	function discard() {
@@ -472,7 +474,7 @@
 			name: '',
 			from: '',
 			isNew: true,
-			meta: { title: '', description: '', image: '', date: kind === 'posts' ? today : '' /* only posts have a date (rss) */, draft: kind !== 'redirects', unlisted: false, featured: false, icon: '', alias: [], tags: [], redirect: '', pos: '', pronunciation: '', ...Object.fromEntries(LANGUAGES.map((l) => [l.code, ''])), examples: [], related: [] },
+			meta: { title: '', description: '', image: '', date: kind === 'posts' ? today : '' /* only posts have a date (rss) */, draft: kind !== 'redirects', unlisted: false, featured: false, icon: '', alias: [], tags: [], redirect: '', pos: '', pronunciation: '', ...Object.fromEntries(LANGUAGES.map((l) => [l.code, ''])), examples: [], related: [], forms: {} },
 			body: ''
 		};
 		// an untouched new item isn't worth keeping
