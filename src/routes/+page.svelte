@@ -1,0 +1,182 @@
+<script>
+	import Tp from '#lib/Tp.svelte';
+	import { focusFade } from '#lib/focusFade.js';
+	import { Globe, BookOpen, Feather } from '@lucide/svelte';
+
+	const topics = [
+		{ icon: Globe, title: 'for everyone', text: 'one shared language, neutral to all.' },
+		{ icon: BookOpen, title: 'learn', text: 'lessons, from the first words onward.' },
+		{ icon: Feather, title: 'notes', text: 'thoughts on building a common tongue.' }
+	];
+
+	let { data } = $props();
+</script>
+
+<svelte:head>
+	<title>abelus.org</title>
+</svelte:head>
+
+<main>
+	<section class="hero">
+		<p class="eyebrow">abelus</p>
+		<h1>one language,<br />for the whole world.</h1>
+		<p class="lead">an engineered language for clear communication across the world.</p>
+	</section>
+
+	{#if data.posts.length}
+		<!-- the posts as a grid: two columns on a phone, more on wider screens -->
+		<section id="latest" class="topics posts" use:focusFade>
+			{#each data.posts as post}
+				<a class="card glass post" href={post.url}>
+					{#if post.image}<img src={post.image} alt="" />{/if}
+					<h2><Tp text={post.title} /></h2>
+					<p><Tp text={post.description} /></p>
+				</a>
+			{/each}
+		</section>
+	{:else}
+	<section id="latest" class="topics">
+		{#each topics as { icon: Icon, title, text }}
+			<article class="card glass">
+				<Icon size={22} strokeWidth={1.75} />
+				<h2>{title}</h2>
+				<p>{text}</p>
+			</article>
+		{/each}
+	</section>
+
+	<section id="about" class="about">
+		<h2>first posts are on their way.</h2>
+		<p>install this site as an app to read offline.</p>
+	</section>
+	{/if}
+</main>
+
+<style>
+	main {
+		max-width: 64rem;
+		margin: 0 auto;
+		padding: calc(var(--top) + 9rem) 1.5rem 8rem;
+	}
+
+	.hero {
+		text-align: center;
+		padding-bottom: 6rem;
+	}
+
+	.eyebrow {
+		margin: 0 0 1rem;
+		font-size: 1rem;
+		font-weight: 600;
+		color: var(--soft);
+	}
+
+	h1 {
+		margin: 0;
+		font-family: var(--title);
+		font-size: clamp(2.75rem, 8vw, 5.5rem);
+		line-height: 1.04;
+		font-weight: 700;
+		letter-spacing: -0.02em;
+		background: linear-gradient(180deg, var(--fg), var(--accent));
+		-webkit-background-clip: text;
+		background-clip: text;
+		color: transparent;
+	}
+
+	.lead {
+		max-width: 30rem;
+		margin: 1.5rem auto 0;
+		font-size: clamp(1.15rem, 2.4vw, 1.4rem);
+		line-height: 1.45;
+		color: var(--muted);
+	}
+
+	.topics {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+		gap: 1rem;
+		scroll-margin-top: calc(var(--top) + 6rem);
+	}
+
+	.posts {
+		grid-template-columns: repeat(auto-fill, minmax(min(10rem, 100%), 1fr));
+		gap: 0.75rem;
+	}
+
+	@media (min-width: 640px) {
+		.posts {
+			grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+			gap: 1rem;
+		}
+	}
+
+	.card {
+		--pad: 1.75rem;
+		padding: var(--pad);
+		border-radius: 1.5rem;
+		color: var(--accent);
+	}
+
+	.post {
+		--pad: clamp(1rem, 3vw, 1.5rem);
+		display: block;
+		transition: transform 0.2s ease;
+	}
+
+	.post:hover {
+		transform: translateY(-2px);
+	}
+
+	.post img {
+		display: block;
+		width: calc(100% + 2 * var(--pad));
+		margin: calc(-1 * var(--pad)) calc(-1 * var(--pad)) 0;
+		aspect-ratio: 16 / 10;
+		object-fit: cover;
+		border-radius: 1.5rem 1.5rem 0 0;
+	}
+
+	.card h2 {
+		margin: 1rem 0 0.35rem;
+		font-family: var(--title);
+		font-style: italic;
+		font-size: 1.25rem;
+		letter-spacing: -0.02em;
+		color: var(--fg);
+		font-weight: 600;
+	}
+
+	.post h2 {
+		margin-top: 0.8rem;
+		font-size: clamp(1.02rem, 3.2vw, 1.25rem);
+		overflow-wrap: anywhere;
+	}
+
+	.post p {
+		font-size: clamp(0.88rem, 2.6vw, 1rem);
+	}
+
+	.card p {
+		margin: 0;
+		line-height: 1.5;
+		color: var(--muted);
+	}
+
+	.about {
+		margin-top: 6rem;
+		text-align: center;
+		scroll-margin-top: calc(var(--top) + 6rem);
+	}
+
+	.about h2 {
+		margin: 0;
+		font-size: clamp(1.6rem, 4vw, 2.4rem);
+		letter-spacing: -0.03em;
+	}
+
+	.about p {
+		margin: 0.75rem 0 0;
+		color: var(--muted);
+	}
+</style>

@@ -1,0 +1,15 @@
+{
+	"id": "/cms/",
+	"name": "abelus cms",
+	"short_name": "abelus cms",
+	"description": "edit abelus.org.",
+	"start_url": "/cms/",
+	"scope": "/cms/",
+	"display": "standalone",
+	"background_color": "#faf6ec",
+	"theme_color": "#faf6ec",
+	"icons": [
+		{ "src": "/cms/icon-192.png", "sizes": "192x192", "type": "image/png" },
+		{ "src": "/cms/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+	]
+}
