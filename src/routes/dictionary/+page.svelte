@@ -1,5 +1,7 @@
 <script>
-	// every abelus word, a to z, with a search in abelus and in the languages they're translated into
+	// every abelus word, a to z, next to its translation in the language picked (remembered on this device).
+	// search looks through abelus and every language
+	import { onMount } from 'svelte';
 	import { Search } from '@lucide/svelte';
 	import Tp from '#lib/Tp.svelte';
 	import { LANGUAGES, fold } from '#lib/dictionary.js';
@@ -7,7 +9,18 @@
 	let { data } = $props();
 
 	let query = $state('');
-	let language = $state('all');
+	let language = $state(LANGUAGES[0].code);
+	onMount(() => {
+		try {
+			const saved = localStorage.getItem('dictionary-language');
+			if (LANGUAGES.some((l) => l.code === saved)) language = /** @type {string} */ (saved);
+		} catch {}
+	});
+	function pick() {
+		try {
+			localStorage.setItem('dictionary-language', language);
+		} catch {}
+	}
 
 	const strip = (/** @type {string} */ t) => fold(t.replace(/<\/?(tp|al)>/g, ''));
 
@@ -18,9 +31,10 @@
 	function match(w, q) {
 		/** @type {{ text: string, lang: string }[]} */
 		const candidates = [];
-		if (language === 'all' || language === 'abelus') candidates.push(...[w.title, ...w.forms].map((text) => ({ text, lang: '' })));
-		for (const { code } of LANGUAGES) {
-			if (language === 'all' || language === code) candidates.push(...(w.translations[code] ?? []).map((text) => ({ text, lang: code })));
+		candidates.push(...[w.title, ...w.forms].map((text) => ({ text, lang: '' })));
+		// the picked language first, so its match is the one shown when several match as well
+		for (const { code } of [...LANGUAGES].sort((a, b) => +(b.code === language) - +(a.code === language))) {
+			candidates.push(...(w.translations[code] ?? []).map((text) => ({ text, lang: code })));
 		}
 		let best = { rank: 3, lang: '', text: '' };
 		for (const c of candidates) {
@@ -45,7 +59,7 @@
 
 <svelte:head>
 	<title>dictionary — abelus.org</title>
-	<meta name="description" content="every abelus word, with translations." />
+	<meta name="description" content="every abelus word, with its translations." />
 </svelte:head>
 
 <main>
@@ -57,9 +71,7 @@
 	<div class="search glass">
 		<Search size={18} />
 		<input type="text" inputmode="search" enterkeyhint="search" bind:value={query} placeholder="search a word" aria-label="search a word" autocapitalize="off" autocorrect="off" spellcheck="false" />
-		<select bind:value={language} aria-label="search in">
-			<option value="all">all languages</option>
-			<option value="abelus">abelus</option>
+		<select bind:value={language} onchange={pick} aria-label="translations in">
 			{#each LANGUAGES as { code, name } (code)}<option value={code}>{name}</option>{/each}
 		</select>
 	</div>
@@ -71,8 +83,8 @@
 					<a href={w.url}>
 						<span class="title"><Tp text={w.title} />{#if w.pos}<small>{w.pos}</small>{/if}</span>
 						<span class="about">
-							{#if lang}<span class="found">{languageName(lang)}: {text}</span>{/if}
-							{#if w.description}<Tp text={w.description} />{/if}
+							{(w.translations[language] ?? []).join(', ') || '—'}
+							{#if lang && lang !== language}<span class="found">{languageName(lang)}: {text}</span>{/if}
 						</span>
 					</a>
 				</li>

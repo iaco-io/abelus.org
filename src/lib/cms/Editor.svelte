@@ -614,10 +614,12 @@
 			</label>
 		{/if}
 		{#if !short}
+			{#if !isWord}
 			<label class="wide">
 				<span>description</span>
-				<textarea class="grow" rows="1" bind:value={() => item.meta.description, (v) => (item.meta.description = flat(v))} placeholder={isWord ? 'a short meaning, shown in the dictionary list' : 'a short summary for lists and rss'} onkeydown={oneLine} {@attach fit(() => item.meta.description)}></textarea>
+				<textarea class="grow" rows="1" bind:value={() => item.meta.description, (v) => (item.meta.description = flat(v))} placeholder="a short summary for lists and rss" onkeydown={oneLine} {@attach fit(() => item.meta.description)}></textarea>
 			</label>
+			{/if}
 			<div>
 				<span class="label">main image</span>
 				<div class="picker">

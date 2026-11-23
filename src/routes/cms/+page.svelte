@@ -833,7 +833,7 @@
 									{/if}
 									{entry.meta.title || entry.name}
 								</span>
-								<small>{entry.kind === 'dictionary' ? [entry.meta.pos, entry.meta.description].filter(Boolean).join(' · ') || addresses(entry)[0] : addresses(entry).join(' • ')}</small>
+								<small>{entry.kind === 'dictionary' ? [entry.meta.pos, entry.meta[LANGUAGES[0].code]].filter(Boolean).join(' · ') || addresses(entry)[0] : addresses(entry).join(' • ')}</small>
 							</span>
 						{/if}
 						<!-- unsaved, unlisted and draft, stacked -->
