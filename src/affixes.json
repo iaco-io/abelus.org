@@ -3,5 +3,10 @@
 		"affix": "-us",
 		"pos": "noun (+)",
 		"type": "suffix"
+	},
+	{
+		"affix": "-as",
+		"pos": "noun (-)",
+		"type": "suffix"
 	}
 ]
