@@ -1,12 +1,47 @@
 [
 	{
-		"affix": "-us",
+		"affix": "us",
 		"pos": "noun (+)",
 		"type": "suffix"
 	},
 	{
-		"affix": "-as",
+		"affix": "(is)",
+		"pos": "noun (•)",
+		"type": "suffix"
+	},
+	{
+		"affix": "as",
 		"pos": "noun (-)",
+		"type": "suffix"
+	},
+	{
+		"affix": "uj",
+		"pos": "adj. (+)",
+		"type": "suffix"
+	},
+	{
+		"affix": "ij",
+		"pos": "adj. (•)",
+		"type": "suffix"
+	},
+	{
+		"affix": "aj",
+		"pos": "adj. (-)",
+		"type": "suffix"
+	},
+	{
+		"affix": "ul",
+		"pos": "adv. (+)",
+		"type": "suffix"
+	},
+	{
+		"affix": "il",
+		"pos": "adv. (•)",
+		"type": "suffix"
+	},
+	{
+		"affix": "al",
+		"pos": "adv. (-)",
 		"type": "suffix"
 	}
 ]
