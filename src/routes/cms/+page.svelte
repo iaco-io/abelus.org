@@ -448,7 +448,8 @@
 		const today = new Date().toISOString().slice(0, 10);
 		baseline = '';
 		editing = {
-			id: crypto.randomUUID(),
+			// randomUUID is missing in some iphone browsers
+			id: crypto.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
 			kind: kind === 'media' ? 'posts' : kind,
 			name: '',
 			from: '',
@@ -685,6 +686,11 @@
 			});
 		} else logout();
 
+		// errors show as a message, so a problem on a phone can be read (and reported) instead of failing silently
+		const report = (/** @type {any} */ e) => flash(`error: ${e.reason?.message ?? e.reason ?? e.message ?? e}`);
+		addEventListener('error', report);
+		addEventListener('unhandledrejection', report);
+
 		const timer = setInterval(checkIdle, 60_000);
 		addEventListener('pointerdown', touch);
 		addEventListener('keydown', touch);
@@ -693,6 +699,8 @@
 			clearInterval(timer);
 			removeEventListener('pointerdown', touch);
 			removeEventListener('keydown', touch);
+			removeEventListener('error', report);
+			removeEventListener('unhandledrejection', report);
 			document.removeEventListener('visibilitychange', checkIdle);
 		};
 	});
