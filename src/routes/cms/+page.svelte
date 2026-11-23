@@ -1,7 +1,7 @@
 <script>
 	import '#lib/cms/cms.css';
 	import { onMount, untrack } from 'svelte';
-	import { Star, ListX, PencilLine, ArrowUpNarrowWide, Tag, ListOrdered, ClipboardPaste, Lock, Feather, File as FileIcon, ExternalLink, CloudAlert, Image as ImageIcon, Music, Film, BookA, Puzzle } from '@lucide/svelte';
+	import { Star, ListX, PencilLine, ArrowUpNarrowWide, Tag, ListOrdered, ClipboardPaste, Lock, Feather, File as FileIcon, ExternalLink, CloudAlert, Image as ImageIcon, Music, Film, BookA, Puzzle, AudioLines } from '@lucide/svelte';
 	import Fabs from '#lib/Fabs.svelte';
 	import Panel from '#lib/Panel.svelte';
 	import ThemeToggle from '#lib/ThemeToggle.svelte';
@@ -24,6 +24,8 @@
 	import AlphabetDialog from '#lib/cms/AlphabetDialog.svelte';
 	import AffixesDialog from '#lib/cms/AffixesDialog.svelte';
 	import savedAffixes from '../../affixes.json';
+	import PhonotacticsDialog from '#lib/cms/PhonotacticsDialog.svelte';
+	import savedPhonotactics from '../../phonotactics.json';
 	import { LANGUAGES, list as wordList } from '#lib/dictionary.js';
 	import { setAlphabet, alphabet as inAlphabet } from '#lib/tp.js';
 	import savedAlphabet from '../../alphabet.json';
@@ -360,6 +362,23 @@
 		}
 	}
 
+	// the sound rules words are checked against, kept in src/phonotactics.json
+	const PHONOTACTICS = 'src/phonotactics.json';
+	let phonotactics = $state(/** @type {import('#lib/phonotactics.js').Rules} */ (savedPhonotactics));
+	let phonotacticsOpen = $state(false);
+	async function savePhonotactics(/** @type {import('#lib/phonotactics.js').Rules} */ next) {
+		if (!api) return;
+		try {
+			const sha = (await api.list()).find((f) => f.path === PHONOTACTICS)?.sha;
+			await api.write(PHONOTACTICS, utf8ToBase64(JSON.stringify(next, null, '\t') + '\n'), sha, 'cms: update phonotactics');
+			phonotactics = next;
+			phonotacticsOpen = false;
+			flash('phonotactics saved');
+		} catch (err) {
+			flash(/** @type {Error} */ (err).message);
+		}
+	}
+
 	async function refresh() {
 		if (!api) return;
 		loading = true;
@@ -385,6 +404,12 @@
 				api
 					.read(AFFIXES)
 					.then(({ text }) => (affixes = JSON.parse(text)))
+					.catch(() => {});
+			}
+			if (files.includes(PHONOTACTICS)) {
+				api
+					.read(PHONOTACTICS)
+					.then(({ text }) => (phonotactics = JSON.parse(text)))
 					.catch(() => {});
 			}
 			const known = new Map(entries.map((e) => [e.sha, e]));
@@ -878,7 +903,7 @@
 	{#if !api}
 		<Login onlogin={login} />
 	{:else if editing}
-		<Editor bind:item={editing} {affixes} words={entries.filter((e) => e.kind === 'dictionary' && !e.meta.draft).map((e) => e.meta.title || e.name)} {images} {resolve} {ask} {manage} {alphabet} {categories} tagsInUse={allTags.map(([t]) => t)} onsave={save} onupload={upload} ondelete={remove} onback={() => (editing = null)} partial={!!partials[keyOf(editing)]} ondiscard={discard} />
+		<Editor bind:item={editing} {affixes} {phonotactics} words={entries.filter((e) => e.kind === 'dictionary' && !e.meta.draft).map((e) => e.meta.title || e.name)} {images} {resolve} {ask} {manage} {alphabet} {categories} tagsInUse={allTags.map(([t]) => t)} onsave={save} onupload={upload} ondelete={remove} onback={() => (editing = null)} partial={!!partials[keyOf(editing)]} ondiscard={discard} />
 	{:else}
 		<header>
 			<div class="top">
@@ -915,6 +940,10 @@
 
 	{#if alphabetOpen}
 		<AlphabetDialog setup={alphabet} onsave={saveAlphabet} onclose={() => (alphabetOpen = false)} />
+	{/if}
+
+	{#if phonotacticsOpen}
+		<PhonotacticsDialog rules={phonotactics} onsave={savePhonotactics} onclose={() => (phonotacticsOpen = false)} />
 	{/if}
 
 	{#if affixesOpen}
@@ -984,6 +1013,13 @@
 				<button class="entry" onclick={() => ((menu = false), (affixesOpen = true))}>
 					<Puzzle size={24} strokeWidth={1.75} />
 					affixes
+				</button>
+			</li>
+			<li>
+				<!-- the sound rules: dictionary words show whether they fit -->
+				<button class="entry" onclick={() => ((menu = false), (phonotacticsOpen = true))}>
+					<AudioLines size={24} strokeWidth={1.75} />
+					phonotactics
 				</button>
 			</li>
 		</ul>

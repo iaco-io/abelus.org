@@ -10,6 +10,7 @@
 	import { highlight } from './highlight.js';
 	import { urls, serialize } from '../markdown.js';
 	import { LANGUAGES, PARTS, wordInfo, slug } from '../dictionary.js';
+	import { check } from '../phonotactics.js';
 
 	/**
 	 * @typedef {{ title: string, description: string, image: string, date: string, draft: boolean, unlisted?: boolean, featured?: boolean, icon?: string, alias: string[], redirect: string, [field: string]: any }} Meta
@@ -24,6 +25,7 @@
 	 *   alphabet: Record<string, { to: string, on: boolean }>,
  *   affixes: { affix: string, pos: string }[],
  *   words: string[],
+ *   phonotactics: import('../phonotactics.js').Rules,
 	 *   categories: string[],
 	 *   tagsInUse: string[],
 	 *   ondelete: () => Promise<void>,
@@ -32,7 +34,7 @@
 	 *   ondiscard: () => void
 	 * }}
 	 */
-	let { item = $bindable(), affixes, words, images, resolve, ask, manage, alphabet, categories, tagsInUse, onsave, onupload, ondelete, onback, partial, ondiscard } = $props();
+	let { item = $bindable(), affixes, phonotactics, words, images, resolve, ask, manage, alphabet, categories, tagsInUse, onsave, onupload, ondelete, onback, partial, ondiscard } = $props();
 
 	let busy = $state('');
 	/** @type {HTMLTextAreaElement | undefined} */
@@ -42,6 +44,12 @@
 	const short = $derived(item.kind === 'redirects');
 	// dictionary words: no tags, aliases or redirect, but translations and the rest
 	const isWord = $derived(item.kind === 'dictionary');
+	// whether the word, and its forms, fit the phonotactics (set in the menu)
+	const sound = $derived(isWord ? check(item.meta.title, phonotactics) : null);
+	const offForms = $derived(
+		isWord && sound ? wordInfo(item.meta, affixes).forms.filter((f) => !check(f.form, phonotactics)?.ok).map((f) => f.form) : []
+	);
+
 	// a new word's file name (its address) follows the word, until it's changed by hand
 	let autoName = $state(untrack(() => item.isNew && item.kind === 'dictionary'));
 	$effect(() => {
@@ -668,6 +676,12 @@
 		<label class="wide">
 			<span>{isWord ? 'word' : 'title'}</span>
 			<textarea class="grow" rows="1" bind:value={() => item.meta.title, (v) => (item.meta.title = flat(v))} placeholder={isWord ? 'the abelus word' : 'title'} onkeydown={oneLine} {@attach fit(() => item.meta.title)}></textarea>
+			{#if sound}
+				<small class="sound" class:off={!sound.ok}>
+					{sound.ok ? '✓ fits the phonotactics' : '✗ doesn’t fit the phonotactics'}: {sound.shown}{#if sound.unknown.length}{' · '}not in any group: {sound.unknown.join(' ')}{/if}
+					{#if sound.ok && offForms.length}<br /><span class="off">✗ forms that don’t fit: {offForms.join(', ')}</span>{/if}
+				</small>
+			{/if}
 		</label>
 		<label>
 			<span>file name {badNumber ? `→ number must be ${'0'.repeat(digits - 1)}1-` : links ? `→ ${links}` : ''}</span>
@@ -1235,6 +1249,15 @@
 	.alias {
 		position: relative;
 		width: 10rem;
+	}
+
+	.sound {
+		color: var(--accent);
+	}
+
+	.sound.off,
+	.sound .off {
+		color: #c0504d;
 	}
 
 	.example {
