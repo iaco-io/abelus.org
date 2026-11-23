@@ -1,11 +1,35 @@
 {
 	"groups": [
-		{ "name": "I", "letters": "b d f g h j l m n p q r s t", "where": "anywhere" },
-		{ "name": "C₁", "letters": "b d f g p q t", "where": "anywhere" },
-		{ "name": "C₂", "letters": "l r", "where": "anywhere" },
-		{ "name": "V", "letters": "a e i o u", "where": "anywhere" },
-		{ "name": "M", "letters": "l m n r s", "where": "middle" },
-		{ "name": "F", "letters": "f j l n p q r s", "where": "end" }
+		{
+			"name": "I",
+			"letters": "b d f g h j l m n p q r s t",
+			"where": "anywhere"
+		},
+		{
+			"name": "C₁",
+			"letters": "b d f g p q t",
+			"where": "anywhere"
+		},
+		{
+			"name": "C₂",
+			"letters": "l r",
+			"where": "anywhere"
+		},
+		{
+			"name": "V",
+			"letters": "a e i o u",
+			"where": "anywhere"
+		},
+		{
+			"name": "M",
+			"letters": "l m n r s",
+			"where": "middle"
+		},
+		{
+			"name": "E",
+			"letters": "f j l n p q r s",
+			"where": "end"
+		}
 	],
-	"syllable": "({I, C₁C₂}) V ({M, F})"
+	"syllable": "({I, C₁C₂}) V ({M, E})"
 }
