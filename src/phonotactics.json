@@ -7,5 +7,5 @@
 		{ "name": "M", "letters": "l m n r s", "where": "middle" },
 		{ "name": "F", "letters": "f j l n p q r s", "where": "end" }
 	],
-	"syllable": "σ → ({I, C₁C₂}) V ({M, F})"
+	"syllable": "({I, C₁C₂}) V ({M, F})"
 }

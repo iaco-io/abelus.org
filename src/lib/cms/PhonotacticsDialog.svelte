@@ -1,6 +1,6 @@
 <script>
 	// edits the phonotactics: letter groups (each kept anywhere, to the middle of words, or to their end) and the
-	// syllable they make, like σ → ({I, C₁C₂}) V ({M, F}). a word to try shows the result as it's edited
+	// syllable (σ) they make, like ({I, C₁C₂}) V ({M, F}). a word to try shows the result as it's edited
 	import { Save, Undo2, Plus, X, ChevronUp, ChevronDown } from '@lucide/svelte';
 	import { syllables, check } from '../phonotactics.js';
 
@@ -89,7 +89,10 @@
 
 	<label class="field">
 		<span>syllable · ( ) optional, &#123;a, b&#125; one of them</span>
-		<input bind:value={draft.syllable} placeholder="σ → (&#123;I, C₁C₂&#125;) V (&#123;M, F&#125;)" autocapitalize="off" autocorrect="off" spellcheck="false" />
+		<span class="sigma">
+			<b>σ →</b>
+			<input bind:value={draft.syllable} placeholder="(&#123;I, C₁C₂&#125;) V (&#123;M, F&#125;)" autocapitalize="off" autocorrect="off" spellcheck="false" />
+		</span>
 	</label>
 	{#if problem}<small class="bad">{problem}</small>{/if}
 
@@ -224,6 +227,23 @@
 	.field span {
 		font-size: 0.85rem;
 		color: var(--muted);
+	}
+
+	.sigma {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+	}
+
+	.sigma b {
+		flex: none;
+		font-weight: 500;
+		font-size: 1.1rem;
+	}
+
+	.sigma input {
+		flex: 1;
+		min-width: 0;
 	}
 
 	small {

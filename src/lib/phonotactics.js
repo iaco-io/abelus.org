@@ -1,18 +1,17 @@
 // phonotactics: whether a word fits the language's sound rules (src/phonotactics.json, edited in the cms).
-// letter groups (I, V, …) and a syllable made of them, like σ → ({I, C₁C₂}) V ({M, F}). a word is one or more
+// letter groups (I, V, …) and the syllable (σ) made of them, like ({I, C₁C₂}) V ({M, F}). a word is one or more
 // syllables in a row; a group can be kept to the middle of words (_.) or their end (_#)
 
 /** @typedef {{ name: string, letters: string, where: 'anywhere' | 'middle' | 'end' }} Group */
 /** @typedef {{ groups: Group[], syllable: string }} Rules */
 
 /**
- * every way a syllable can be spelled in groups. the syllable is written like σ → ({I, C₁C₂}) V ({M, F}):
- * ( … ) is optional, { a, b } is one of them (required), "σ →" in front is optional, and group names can be
- * written together (C₁C₂)
+ * every way a syllable can be spelled in groups. the syllable is written like ({I, C₁C₂}) V ({M, F}):
+ * ( … ) is optional, { a, b } is one of them (required), and group names can be written together (C₁C₂)
  * @param {string} text @param {string[]} names
  */
 export function syllables(text, names) {
-	const source = text.replace(/^\s*σ\s*(→|->|=)?\s*/, '');
+	const source = text;
 	// split into ( ) { } , and group names, the longest name that fits first
 	const byLength = [...names].sort((a, b) => b.length - a.length);
 	/** @type {string[]} */
