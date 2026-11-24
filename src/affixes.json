@@ -30,6 +30,11 @@
 		"type": "suffix"
 	},
 	{
+		"affix": "ulu",
+		"pos": "adv. (++)",
+		"type": "suffix"
+	},
+	{
 		"affix": "ul",
 		"pos": "adv. (+)",
 		"type": "suffix"
@@ -42,6 +47,11 @@
 	{
 		"affix": "al",
 		"pos": "adv. (-)",
+		"type": "suffix"
+	},
+	{
+		"affix": "ala",
+		"pos": "adv. (--)",
 		"type": "suffix"
 	}
 ]
