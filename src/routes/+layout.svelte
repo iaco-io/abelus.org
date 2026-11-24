@@ -81,7 +81,7 @@
 
 {#if !cms}
 	<header>
-		<a class="logo" href="/">abelus.org</a>
+		<a class="logo" href="/"><BeeIcon size={22} />abelus.org</a>
 	</header>
 	<!-- a landmark of its own, so all content is in one (it is positioned on its own, the aside adds nothing visible) -->
 	<aside aria-label="day clock"><DayClock icon="grid" /></aside>
@@ -142,9 +142,13 @@
 		align-items: center;
 	}
 
+	/* the bee before the name */
 	.logo {
 		/* a touch higher, so its letters line up with the middle of the clock's numbers */
 		transform: translateY(-2px);
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
 		font-size: 1.25rem;
 		font-weight: 700;
 		letter-spacing: -0.03em;
