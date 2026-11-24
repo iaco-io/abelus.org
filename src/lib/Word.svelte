@@ -1,13 +1,52 @@
 <script>
 	// a dictionary word's details, under its title: part of speech, pronunciation, translations, forms, examples
+	// language chips under the title show or hide each language's translations. at first: esperanto and the
+	// languages the browser is set to (english and esperanto if it has none of them); then as picked, kept on
+	// this device for every word
+	import { onMount } from 'svelte';
 	import Tp from './Tp.svelte';
-	import { slug } from './dictionary.js';
+	import { slug, LANGUAGES } from './dictionary.js';
 
 	/** @type {{ word: ReturnType<typeof import('./dictionary.js').wordInfo> }} */
 	let { word } = $props();
+
+	const KEY = 'word-languages';
+	// the languages this word has translations in, for itself or its forms
+	const available = $derived(
+		LANGUAGES.filter((l) => word.translations.some((t) => t.code === l.code) || word.forms.some((f) => f.translations?.some((t) => t.code === l.code)))
+	);
+	let on = $state(/** @type {string[]} */ (['eo', 'en']));
+
+	onMount(() => {
+		try {
+			const saved = JSON.parse(localStorage.getItem(KEY) ?? 'null');
+			if (Array.isArray(saved)) return void (on = saved);
+		} catch {}
+		// the browser's languages, as codes here: pt-BR is pt, nb and nn are norwegian (no)
+		const mine = navigator.languages.map((l) => l.toLowerCase().split('-')[0]).map((l) => (l === 'nb' || l === 'nn' ? 'no' : l));
+		const known = LANGUAGES.map((l) => l.code).filter((c) => c !== 'eo' && mine.includes(c));
+		on = ['eo', ...(known.length ? known : ['en'])];
+	});
+
+	function toggle(/** @type {string} */ code) {
+		on = on.includes(code) ? on.filter((c) => c !== code) : [...on, code];
+		try {
+			localStorage.setItem(KEY, JSON.stringify(on));
+		} catch {}
+	}
+
+	const translations = $derived(word.translations.filter((t) => on.includes(t.code)));
 </script>
 
 <section class="word">
+	{#if available.length}
+		<div class="langs" role="group" aria-label="translations shown">
+			{#each available as { code, name } (code)}
+				<button class:on={on.includes(code)} aria-pressed={on.includes(code)} title={name} onclick={() => toggle(code)}>{code}</button>
+			{/each}
+		</div>
+	{/if}
+
 	{#if word.pos || word.pronunciation}
 		<p class="kind">
 			{#if word.pos}<em>{word.pos}</em>{/if}
@@ -15,9 +54,9 @@
 		</p>
 	{/if}
 
-	{#if word.translations.length}
+	{#if translations.length}
 		<dl class="glass">
-			{#each word.translations as { code, name, words } (code)}
+			{#each translations as { code, name, words } (code)}
 				<dt>{name}</dt>
 				<dd lang={code}>{words.join(', ')}</dd>
 			{/each}
@@ -28,11 +67,12 @@
 		<h2>forms</h2>
 		<dl class="glass">
 			{#each word.forms as { pos, form, translations }}
+				{@const shown = (translations ?? []).filter((t) => on.includes(t.code))}
 				<dt>{pos}</dt>
 				<dd>
 					{form}
-					{#if translations?.length}
-						<small>{translations.map((t) => `${t.name}: ${t.words.join(', ')}`).join(' · ')}</small>
+					{#if shown.length}
+						<small>{shown.map((t) => `${t.name}: ${t.words.join(', ')}`).join(' · ')}</small>
 					{/if}
 				</dd>
 			{/each}
@@ -57,6 +97,34 @@
 <style>
 	.word {
 		margin: -1rem 0 2.5rem;
+	}
+
+	.langs {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		gap: 0.4rem;
+		margin: 0 0 1rem;
+	}
+
+	.langs button {
+		min-width: 2.4rem;
+		padding: 0.25rem 0.6rem;
+		border: 1px solid var(--glass-edge);
+		border-radius: 999px;
+		font: inherit;
+		font-size: 0.8rem;
+		font-weight: 600;
+		letter-spacing: 0.04em;
+		color: var(--muted);
+		background: none;
+		cursor: pointer;
+	}
+
+	.langs button.on {
+		color: var(--bg);
+		background: var(--accent);
+		border-color: var(--accent);
 	}
 
 	.kind {
