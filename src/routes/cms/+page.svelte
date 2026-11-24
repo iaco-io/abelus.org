@@ -26,7 +26,8 @@
 	import savedAffixes from '../../affixes.json';
 	import PhonotacticsDialog from '#lib/cms/PhonotacticsDialog.svelte';
 	import savedPhonotactics from '../../phonotactics.json';
-	import { LANGUAGES, list as wordList } from '#lib/dictionary.js';
+	import { LANGUAGES, list as wordList, wordInfo } from '#lib/dictionary.js';
+	import { check } from '#lib/phonotactics.js';
 	import { setAlphabet, alphabet as inAlphabet } from '#lib/tp.js';
 	import savedAlphabet from '../../alphabet.json';
 	import { github, rawUrl, utf8ToBase64 } from '#lib/cms/github.js';
@@ -235,7 +236,7 @@
 
 	// list filters: show only drafts, only unlisted pages, only items with unsaved changes on this device
 	// (several at once show any of them). posts can also put drafts and unsaved ones first
-	let filters = $state({ dictionary: { draft: false, local: false, first: false }, posts: { draft: false, local: false, featured: false, first: true }, pages: { draft: false, local: false, unlisted: false, first: true } });
+	let filters = $state({ dictionary: { draft: false, local: false, sound: false, first: false }, posts: { draft: false, local: false, featured: false, first: true }, pages: { draft: false, local: false, unlisted: false, first: true } });
 	const isLocal = (/** @type {Entry} */ e) => !!partials[`${e.kind}/${e.name}`];
 	// the groups when sorting: 0 drafts and unsaved, then (pages only) 1 unlisted, then the rest
 	// (posts: drafts and unsaved, then featured, then the rest; pages: drafts and unsaved, unlisted, the rest)
@@ -245,9 +246,11 @@
 	/** @param {'dictionary' | 'posts' | 'pages'} k @param {Entry} e */
 	function shown(k, e) {
 		const f = /** @type {Record<string, boolean>} */ (filters[k]);
-		const on = ['draft', 'local', 'unlisted', 'featured'].filter((x) => f[x]);
+		const on = ['draft', 'local', 'unlisted', 'featured', 'sound'].filter((x) => f[x]);
 		if (!on.length) return true;
-		return on.some((x) => (x === 'draft' ? e.meta.draft : x === 'local' ? isLocal(e) : x === 'featured' ? e.meta.featured : e.meta.unlisted));
+		return on.some((x) =>
+			x === 'draft' ? e.meta.draft : x === 'local' ? isLocal(e) : x === 'featured' ? e.meta.featured : x === 'sound' ? offSound.has(e.name) : e.meta.unlisted
+		);
 	}
 
 	// tags promoted to categories, kept in src/categories.json; the newest list is read from github
@@ -381,6 +384,19 @@
 		}
 	}
 
+
+	// dictionary words that don't fit the phonotactics: the word, or one of the forms its affixes make. as edited
+	// on this device, and checked again whenever the words, the phonotactics or the affixes change
+	const offSound = $derived.by(() => {
+		const off = new Set();
+		for (const e of entries) {
+			if (e.kind !== 'dictionary') continue;
+			const meta = partials[`dictionary/${e.name}`]?.meta ?? e.meta;
+			const word = check(meta.title || e.name, phonotactics);
+			if (word && (!word.ok || wordInfo(meta, affixes).forms.some((f) => check(f.form, phonotactics)?.ok === false))) off.add(e.name);
+		}
+		return off;
+	});
 
 	async function refresh() {
 		if (!api) return;
@@ -778,6 +794,10 @@
 				<button class:on={filters.pages.unlisted} title="unlisted" aria-pressed={filters.pages.unlisted} onclick={() => (filters.pages.unlisted = !filters.pages.unlisted)}>
 					<ListX size={16} />{all.filter((e) => e.meta.unlisted).length}
 				</button>
+			{:else if k === 'dictionary'}
+				<button class:on={filters.dictionary.sound} title="doesn't fit the phonotactics" aria-pressed={filters.dictionary.sound} onclick={() => (filters.dictionary.sound = !filters.dictionary.sound)}>
+					<AudioLines size={16} />{offSound.size}
+				</button>
 			{:else if k === 'posts'}
 				<button class:on={filters.posts.featured} title="featured" aria-pressed={filters.posts.featured} onclick={() => (filters.posts.featured = !filters.posts.featured)}>
 					<Star size={16} />{all.filter((e) => e.meta.featured).length}
@@ -875,6 +895,7 @@
 								<span class="unsaved" title="unsaved changes on this device"><CloudAlert size={18} /></span>
 							{/if}
 							{#if entry.kind === 'pages' && now.unlisted}<span class="mark" title="unlisted"><ListX size={18} /></span>{/if}
+							{#if entry.kind === 'dictionary' && offSound.has(entry.name)}<span class="mark off-sound" title="doesn't fit the phonotactics"><AudioLines size={18} /></span>{/if}
 							{#if entry.kind !== 'redirects' && now.draft}<span class="mark" title="draft"><PencilLine size={18} /></span>{/if}
 							{#if entry.kind === 'posts' && now.featured}<span class="mark" title="featured"><Star size={18} /></span>{/if}
 						</span>
@@ -1479,6 +1500,10 @@
 
 	.empty {
 		color: var(--muted);
+	}
+
+	.off-sound {
+		color: #c0504d;
 	}
 
 	.toast {
