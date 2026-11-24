@@ -1,7 +1,7 @@
 <script>
 	import '#lib/cms/cms.css';
 	import { onMount, untrack } from 'svelte';
-	import { Star, ListX, PencilLine, ArrowUpNarrowWide, Tag, ListOrdered, ClipboardPaste, Lock, Feather, File as FileIcon, ExternalLink, CloudAlert, Image as ImageIcon, Music, Film, BookA, Puzzle, AudioLines, Ruler } from '@lucide/svelte';
+	import { Star, ListX, PencilLine, ArrowUpNarrowWide, Tag, ListOrdered, ClipboardPaste, Lock, Feather, File as FileIcon, ExternalLink, CloudAlert, Image as ImageIcon, Music, Film, BookA, Puzzle, AudioLines } from '@lucide/svelte';
 	import Fabs from '#lib/Fabs.svelte';
 	import Panel from '#lib/Panel.svelte';
 	import ThemeToggle from '#lib/ThemeToggle.svelte';
@@ -22,7 +22,6 @@
 	import Thumb from '#lib/cms/Thumb.svelte';
 	import BeeIcon from '#lib/BeeIcon.svelte';
 	import AlphabetDialog from '#lib/cms/AlphabetDialog.svelte';
-	import Viewport from '#lib/cms/Viewport.svelte';
 	import AffixesDialog from '#lib/cms/AffixesDialog.svelte';
 	import savedAffixes from '../../affixes.json';
 	import PhonotacticsDialog from '#lib/cms/PhonotacticsDialog.svelte';
@@ -382,8 +381,6 @@
 		}
 	}
 
-	// how this device measures the screen (menu: screen), for layout gaps on iphones
-	let viewport = $state(false);
 
 	async function refresh() {
 		if (!api) return;
@@ -956,8 +953,6 @@
 		<AffixesDialog {affixes} onsave={saveAffixes} onclose={() => (affixesOpen = false)} />
 	{/if}
 
-	{#if viewport}<Viewport onclose={() => (viewport = false)} />{/if}
-
 	{#if dialog}
 		<ImageDialog {...dialog.props} {images} {resolve} ondone={dialog.done} />
 	{/if}
@@ -1009,13 +1004,7 @@
 					menu order
 				</button>
 			</li>
-			<li>
-				<!-- how this device measures the screen, to sort out layout gaps on iphones -->
-				<button class="entry" onclick={() => ((menu = false), (viewport = true))}>
-					<Ruler size={24} strokeWidth={1.75} />
-					screen
-				</button>
-			</li>
+
 			<li>
 				<!-- the alphabet is called abelus, written in itself (a bee) -->
 				<button class="entry" onclick={() => ((menu = false), (alphabetOpen = true))}>
