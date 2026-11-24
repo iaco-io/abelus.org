@@ -886,7 +886,7 @@
 					<span class="track"><span class="knob">{#if item.meta.unlisted}<ListX size={14} strokeWidth={2} />{/if}</span></span>
 					unlisted <small>not in the menu, still opens by its address</small>
 				</button>
-			{:else if item.kind === 'posts'}
+			{:else if item.kind === 'posts' || item.kind === 'dictionary'}
 				<button
 					class="switch"
 					role="switch"

@@ -55,6 +55,8 @@
 	});
 
 	const languageName = (/** @type {string} */ code) => LANGUAGES.find((l) => l.code === code)?.name ?? code;
+	// marked as featured in the cms: cards on top, while not searching
+	const featured = $derived(data.words.filter((w) => w.featured));
 </script>
 
 <svelte:head>
@@ -75,6 +77,18 @@
 			{#each LANGUAGES as { code, name } (code)}<option value={code}>{name}</option>{/each}
 		</select>
 	</div>
+
+	{#if featured.length && !query.trim()}
+		<section class="featured" aria-label="featured words">
+			{#each featured as w (w.url)}
+				<a class="card glass" href={w.url}>
+					<span class="word"><Tp text={w.title} /></span>
+					{#if w.pos || w.pronunciation}<span class="kind">{[w.pos, w.pronunciation && `/${w.pronunciation}/`].filter(Boolean).join(' · ')}</span>{/if}
+					<span class="meaning">{(w.translations[language] ?? []).join(', ') || '—'}</span>
+				</a>
+			{/each}
+		</section>
+	{/if}
 
 	{#if results.length}
 		<ul>
@@ -152,6 +166,36 @@
 		background: var(--panel);
 	}
 
+	.featured {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+		gap: 0.75rem;
+		margin-top: 1.5rem;
+	}
+
+	.card {
+		display: grid;
+		align-content: start;
+		color: inherit;
+		text-decoration: none;
+		gap: 0.3rem;
+		padding: 1.1rem 1.2rem;
+		border-radius: 1.25rem;
+	}
+
+	.card .word {
+		font-family: var(--title);
+		font-style: italic;
+		font-weight: 600;
+		font-size: 1.6rem;
+		color: var(--accent);
+	}
+
+	.card .kind {
+		font-size: 0.85rem;
+		color: var(--muted);
+	}
+
 	ul {
 		margin: 1.5rem 0 0;
 		padding: 0;
@@ -162,7 +206,7 @@
 		border-top: 1px solid var(--glass-edge);
 	}
 
-	a {
+	li a {
 		display: grid;
 		grid-template-columns: minmax(6rem, 1fr) 2fr;
 		gap: 1rem;
@@ -171,7 +215,7 @@
 		text-decoration: none;
 	}
 
-	a:hover .title {
+	li a:hover .title {
 		color: var(--accent);
 	}
 

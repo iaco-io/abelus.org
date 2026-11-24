@@ -1,7 +1,7 @@
 <script>
 	import '#lib/cms/cms.css';
 	import { onMount, untrack } from 'svelte';
-	import { Star, ListX, PencilLine, ArrowUpNarrowWide, Tag, ListOrdered, ClipboardPaste, Lock, Feather, File as FileIcon, ExternalLink, CloudAlert, Image as ImageIcon, Music, Film, BookA, Puzzle, AudioLines } from '@lucide/svelte';
+	import { Star, ListX, PencilLine, ArrowUpNarrowWide, Tag, ListOrdered, ClipboardPaste, Lock, Feather, File as FileIcon, ExternalLink, CloudAlert, Image as ImageIcon, Music, Film, BookA, Puzzle, AudioLines, AudioLinesX } from '@lucide/svelte';
 	import Fabs from '#lib/Fabs.svelte';
 	import Panel from '#lib/Panel.svelte';
 	import ThemeToggle from '#lib/ThemeToggle.svelte';
@@ -236,7 +236,7 @@
 
 	// list filters: show only drafts, only unlisted pages, only items with unsaved changes on this device
 	// (several at once show any of them). posts can also put drafts and unsaved ones first
-	let filters = $state({ dictionary: { draft: false, local: false, sound: false, first: false }, posts: { draft: false, local: false, featured: false, first: true }, pages: { draft: false, local: false, unlisted: false, first: true } });
+	let filters = $state({ dictionary: { draft: false, local: false, sound: false, featured: false, first: false }, posts: { draft: false, local: false, featured: false, first: true }, pages: { draft: false, local: false, unlisted: false, first: true } });
 	const isLocal = (/** @type {Entry} */ e) => !!partials[`${e.kind}/${e.name}`];
 	// the groups when sorting: 0 drafts and unsaved, then (pages only) 1 unlisted, then the rest
 	// (posts: drafts and unsaved, then featured, then the rest; pages: drafts and unsaved, unlisted, the rest)
@@ -796,7 +796,10 @@
 				</button>
 			{:else if k === 'dictionary'}
 				<button class:on={filters.dictionary.sound} title="doesn't fit the phonotactics" aria-pressed={filters.dictionary.sound} onclick={() => (filters.dictionary.sound = !filters.dictionary.sound)}>
-					<AudioLines size={16} />{offSound.size}
+					<AudioLinesX size={16} />{offSound.size}
+				</button>
+				<button class:on={filters.dictionary.featured} title="featured" aria-pressed={filters.dictionary.featured} onclick={() => (filters.dictionary.featured = !filters.dictionary.featured)}>
+					<Star size={16} />{all.filter((e) => e.meta.featured).length}
 				</button>
 			{:else if k === 'posts'}
 				<button class:on={filters.posts.featured} title="featured" aria-pressed={filters.posts.featured} onclick={() => (filters.posts.featured = !filters.posts.featured)}>
@@ -837,7 +840,7 @@
 						<span class="marks">
 							{#if p.kind === 'pages' && p.meta.unlisted}<span class="mark" title="unlisted"><ListX size={18} /></span>{/if}
 							{#if p.kind !== 'redirects' && p.meta.draft}<span class="mark" title="draft"><PencilLine size={18} /></span>{/if}
-							{#if p.kind === 'posts' && p.meta.featured}<span class="mark" title="featured"><Star size={18} /></span>{/if}
+							{#if (p.kind === 'posts' || p.kind === 'dictionary') && p.meta.featured}<span class="mark" title="featured"><Star size={18} /></span>{/if}
 						</span>
 					</button>
 				</li>
@@ -895,9 +898,9 @@
 								<span class="unsaved" title="unsaved changes on this device"><CloudAlert size={18} /></span>
 							{/if}
 							{#if entry.kind === 'pages' && now.unlisted}<span class="mark" title="unlisted"><ListX size={18} /></span>{/if}
-							{#if entry.kind === 'dictionary' && offSound.has(entry.name)}<span class="mark off-sound" title="doesn't fit the phonotactics"><AudioLines size={18} /></span>{/if}
+							{#if entry.kind === 'dictionary' && offSound.has(entry.name)}<span class="mark off-sound" title="doesn't fit the phonotactics"><AudioLinesX size={18} /></span>{/if}
 							{#if entry.kind !== 'redirects' && now.draft}<span class="mark" title="draft"><PencilLine size={18} /></span>{/if}
-							{#if entry.kind === 'posts' && now.featured}<span class="mark" title="featured"><Star size={18} /></span>{/if}
+							{#if (entry.kind === 'posts' || entry.kind === 'dictionary') && now.featured}<span class="mark" title="featured"><Star size={18} /></span>{/if}
 						</span>
 						{#if entry.kind === 'redirects'}<span class="detail">{entry.meta.redirect.replace(/^https?:\/\//, '')}</span>{/if}
 					</button>
