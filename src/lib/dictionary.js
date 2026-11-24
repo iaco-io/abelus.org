@@ -2,14 +2,14 @@
 // affixes (src/affixes.json, edited in the cms) make each word's other forms: prefixes go before the word,
 // suffixes after it; with a space they stay a separate particle ("a word")
 
-// the languages a word is translated into. add one here: it shows up in the cms, on word pages and in search
+// the languages a word is translated into, each named in itself (lowercase). add one here: it shows up in the cms, on word pages and in search
 export const LANGUAGES = [
 	{ code: 'en', name: 'english' },
 	{ code: 'eo', name: 'esperanto' },
-	{ code: 'fr', name: 'french' },
-	{ code: 'it', name: 'italian' },
-	{ code: 'no', name: 'norwegian' },
-	{ code: 'pt', name: 'portuguese' }
+	{ code: 'fr', name: 'français' },
+	{ code: 'it', name: 'italiano' },
+	{ code: 'no', name: 'norsk' },
+	{ code: 'pt', name: 'português' }
 ];
 
 // suggestions in the cms; any other part of speech can be typed too
