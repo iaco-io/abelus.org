@@ -240,9 +240,15 @@
 	const isLocal = (/** @type {Entry} */ e) => !!partials[`${e.kind}/${e.name}`];
 	// the groups when sorting: 0 drafts and unsaved, then (pages only) 1 unlisted, then the rest
 	// (posts and words: drafts and unsaved, then featured, then the rest; pages: drafts and unsaved, unlisted, the rest)
-	const GROUPS = { dictionary: ['draft / local words', 'featured words', 'active words'], posts: ['draft / local posts', 'featured posts', 'active posts'], pages: ['draft / local pages', 'unlisted pages', 'active pages'] };
-	const rank = (/** @type {Entry} */ e) =>
-		e.meta.draft || isLocal(e) ? 0 : (e.kind === 'pages' ? e.meta.unlisted : e.meta.featured) ? 1 : 2;
+	const GROUPS = { dictionary: ['phonotactics problems', 'draft / local words', 'featured words', 'active words'], posts: ['draft / local posts', 'featured posts', 'active posts'], pages: ['draft / local pages', 'unlisted pages', 'active pages'] };
+	// (words: first the ones that don't fit the phonotactics, then as posts)
+	const rank = (/** @type {Entry} */ e) => {
+		if (e.kind === 'dictionary' && offSound.has(e.name)) return 0;
+		const r = e.meta.draft || isLocal(e) ? 0 : (e.kind === 'pages' ? e.meta.unlisted : e.meta.featured) ? 1 : 2;
+		return e.kind === 'dictionary' ? r + 1 : r;
+	};
+	// the group new, unsaved items belong to: draft / local
+	const localGroup = (/** @type {Section} */ k) => (k === 'dictionary' ? 1 : 0);
 	/** @param {'dictionary' | 'posts' | 'pages'} k @param {Entry} e */
 	function shown(k, e) {
 		const f = /** @type {Record<string, boolean>} */ (filters[k]);
@@ -773,6 +779,73 @@
 	{/if}
 {/snippet}
 
+{#snippet freshRow(/** @type {string} */ key, /** @type {any} */ p)}
+		<li>
+			<button class="row glass" onclick={() => openPartial(key)}>
+				<span class="unsaved"><CloudAlert size={20} /></span>
+				<span class="title">{p.meta.title || (p.name ? `/${p.name}` : 'untitled')} <small>new, not saved yet</small></span>
+				<span class="marks">
+					{#if p.kind === 'pages' && p.meta.unlisted}<span class="mark" title="unlisted"><ListX size={18} /></span>{/if}
+					{#if p.kind !== 'redirects' && p.meta.draft}<span class="mark" title="draft"><PencilLine size={18} /></span>{/if}
+					{#if (p.kind === 'posts' || p.kind === 'dictionary') && p.meta.featured}<span class="mark" title="featured"><Star size={18} /></span>{/if}
+				</span>
+			</button>
+		</li>
+{/snippet}
+
+{#snippet entryRow(/** @type {Entry} */ entry)}
+		<!-- draft / unlisted as edited on this device, if there are unsaved changes -->
+		{@const now = partials[`${entry.kind}/${entry.name}`]?.meta ?? entry.meta}
+		<li>
+			<button class="row glass" class:media={entry.kind !== 'redirects'} onclick={() => open(entry)}>
+				{#if entry.kind === 'redirects'}
+					<ExternalLink size={20} />
+				{:else}
+					<!-- the main image, or the kind's icon when there is none -->
+					<span class="preview">
+						{#if entry.meta.image}
+							<img src={resolve(entry.meta.image)} alt="" loading="lazy" />
+						{:else if entry.kind === 'posts'}<Feather size={20} />{:else if entry.kind === 'dictionary'}<BookA size={20} />{:else}<FileIcon size={20} />{/if}
+					</span>
+				{/if}
+				{#if entry.kind === 'redirects'}
+					<span class="title">
+						/{entry.name}
+						{#if entry.meta.alias.length}
+							<small>{entry.meta.alias.map((x) => `/${x.replace(/^\/+|\/+$/g, '')}`).join(' · ')}</small>
+						{/if}
+					</span>
+				{:else}
+					<span class="title">
+						<span class="name">
+							<!-- a page's own icon (not the default one) -->
+							{#if entry.kind === 'pages' && now.icon && now.icon !== 'lucide/circle-chevron-right'}
+								{#if now.icon.startsWith('lucide/')}
+									<span class="page-icon mask" style:--icon="url('/lucide/{now.icon.slice(7)}.svg')"></span>
+								{:else}
+									<span class="page-icon"><Thumb src={resolve(now.icon)} name={now.icon} size="100%" /></span>
+								{/if}
+							{/if}
+							{entry.meta.title || entry.name}
+						</span>
+						<small>{entry.kind === 'dictionary' ? [entry.meta.pos, entry.meta[LANGUAGES[0].code]].filter(Boolean).join(' · ') || addresses(entry)[0] : addresses(entry).join(' • ')}</small>
+					</span>
+				{/if}
+				<!-- unsaved, unlisted and draft, stacked -->
+				<span class="marks">
+					{#if partials[`${entry.kind}/${entry.name}`]}
+						<span class="unsaved" title="unsaved changes on this device"><CloudAlert size={18} /></span>
+					{/if}
+					{#if entry.kind === 'pages' && now.unlisted}<span class="mark" title="unlisted"><ListX size={18} /></span>{/if}
+					{#if entry.kind === 'dictionary' && offSound.has(entry.name)}<span class="mark off-sound" title="doesn't fit the phonotactics"><AudioLinesX size={18} /></span>{/if}
+					{#if entry.kind !== 'redirects' && now.draft}<span class="mark" title="draft"><PencilLine size={18} /></span>{/if}
+					{#if (entry.kind === 'posts' || entry.kind === 'dictionary') && now.featured}<span class="mark" title="featured"><Star size={18} /></span>{/if}
+				</span>
+				{#if entry.kind === 'redirects'}<span class="detail">{entry.meta.redirect.replace(/^https?:\/\//, '')}</span>{/if}
+			</button>
+		</li>
+{/snippet}
+
 {#snippet listOf(/** @type {Section} */ k)}
 	{#if k === 'media'}
 		<div class="scroll" style:--fade="{fades[k] ?? 0}px" bind:this={scrollers[k]} onscroll={(e) => remember(k, e.currentTarget)}>{@render mediaList()}</div>
@@ -827,93 +900,18 @@
 		<p class="empty">{all.length ? 'nothing matches.' : `no ${k} yet.`}</p>
 	{:else}
 		<ul>
-			<!-- grouped: drafts & unsaved first, then (pages) unlisted, then the rest, each under a heading -->
+			<!-- grouped: each group under its heading (with 'none' when empty); new, unsaved items go in draft / local -->
 			{#if grouped}
-				<li class="group">{GROUPS[k][0]}</li>
-				{#if !fresh.length && !items.some((e) => rank(e) === 0)}<li class="none">none</li>{/if}
-			{/if}
-			{#each fresh as [key, p] (key)}
-				<li>
-					<button class="row glass" onclick={() => openPartial(key)}>
-						<span class="unsaved"><CloudAlert size={20} /></span>
-						<span class="title">{p.meta.title || (p.name ? `/${p.name}` : 'untitled')} <small>new, not saved yet</small></span>
-						<span class="marks">
-							{#if p.kind === 'pages' && p.meta.unlisted}<span class="mark" title="unlisted"><ListX size={18} /></span>{/if}
-							{#if p.kind !== 'redirects' && p.meta.draft}<span class="mark" title="draft"><PencilLine size={18} /></span>{/if}
-							{#if (p.kind === 'posts' || p.kind === 'dictionary') && p.meta.featured}<span class="mark" title="featured"><Star size={18} /></span>{/if}
-						</span>
-					</button>
-				</li>
-			{/each}
-			{#each items as entry, i (entry.kind + entry.name)}
-				{#if grouped}
-					<!-- headings (with 'none' for empty groups) before the first item past each group -->
-					{#each GROUPS[k].slice(1) as title, g}
-						{#if rank(entry) > g && (i === 0 ? true : rank(items[i - 1]) <= g)}
-							<li class="group">{title}</li>
-							{#if rank(entry) > g + 1}<li class="none">none</li>{/if}
-						{/if}
-					{/each}
-				{/if}
-				<!-- draft / unlisted as edited on this device, if there are unsaved changes -->
-				{@const now = partials[`${entry.kind}/${entry.name}`]?.meta ?? entry.meta}
-				<li>
-					<button class="row glass" class:media={entry.kind !== 'redirects'} onclick={() => open(entry)}>
-						{#if entry.kind === 'redirects'}
-							<ExternalLink size={20} />
-						{:else}
-							<!-- the main image, or the kind's icon when there is none -->
-							<span class="preview">
-								{#if entry.meta.image}
-									<img src={resolve(entry.meta.image)} alt="" loading="lazy" />
-								{:else if entry.kind === 'posts'}<Feather size={20} />{:else if entry.kind === 'dictionary'}<BookA size={20} />{:else}<FileIcon size={20} />{/if}
-							</span>
-						{/if}
-						{#if entry.kind === 'redirects'}
-							<span class="title">
-								/{entry.name}
-								{#if entry.meta.alias.length}
-									<small>{entry.meta.alias.map((x) => `/${x.replace(/^\/+|\/+$/g, '')}`).join(' · ')}</small>
-								{/if}
-							</span>
-						{:else}
-							<span class="title">
-								<span class="name">
-									<!-- a page's own icon (not the default one) -->
-									{#if entry.kind === 'pages' && now.icon && now.icon !== 'lucide/circle-chevron-right'}
-										{#if now.icon.startsWith('lucide/')}
-											<span class="page-icon mask" style:--icon="url('/lucide/{now.icon.slice(7)}.svg')"></span>
-										{:else}
-											<span class="page-icon"><Thumb src={resolve(now.icon)} name={now.icon} size="100%" /></span>
-										{/if}
-									{/if}
-									{entry.meta.title || entry.name}
-								</span>
-								<small>{entry.kind === 'dictionary' ? [entry.meta.pos, entry.meta[LANGUAGES[0].code]].filter(Boolean).join(' · ') || addresses(entry)[0] : addresses(entry).join(' • ')}</small>
-							</span>
-						{/if}
-						<!-- unsaved, unlisted and draft, stacked -->
-						<span class="marks">
-							{#if partials[`${entry.kind}/${entry.name}`]}
-								<span class="unsaved" title="unsaved changes on this device"><CloudAlert size={18} /></span>
-							{/if}
-							{#if entry.kind === 'pages' && now.unlisted}<span class="mark" title="unlisted"><ListX size={18} /></span>{/if}
-							{#if entry.kind === 'dictionary' && offSound.has(entry.name)}<span class="mark off-sound" title="doesn't fit the phonotactics"><AudioLinesX size={18} /></span>{/if}
-							{#if entry.kind !== 'redirects' && now.draft}<span class="mark" title="draft"><PencilLine size={18} /></span>{/if}
-							{#if (entry.kind === 'posts' || entry.kind === 'dictionary') && now.featured}<span class="mark" title="featured"><Star size={18} /></span>{/if}
-						</span>
-						{#if entry.kind === 'redirects'}<span class="detail">{entry.meta.redirect.replace(/^https?:\/\//, '')}</span>{/if}
-					</button>
-				</li>
-			{/each}
-			{#if grouped}
-				<!-- groups after the last item, all empty -->
-				{#each GROUPS[k].slice(1) as title, g}
-					{#if !items.some((e) => rank(e) > g)}
-						<li class="group">{title}</li>
-						<li class="none">none</li>
-					{/if}
+				{#each GROUPS[k] as title, g}
+					{@const members = items.filter((e) => rank(e) === g)}
+					<li class="group">{title}</li>
+					{#if g === localGroup(k)}{#each fresh as [key, p] (key)}{@render freshRow(key, p)}{/each}{/if}
+					{#each members as entry (entry.kind + entry.name)}{@render entryRow(entry)}{/each}
+					{#if !members.length && !(g === localGroup(k) && fresh.length)}<li class="none">none</li>{/if}
 				{/each}
+			{:else}
+				{#each fresh as [key, p] (key)}{@render freshRow(key, p)}{/each}
+				{#each items as entry (entry.kind + entry.name)}{@render entryRow(entry)}{/each}
 			{/if}
 		</ul>
 	{/if}
