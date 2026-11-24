@@ -236,11 +236,11 @@
 
 	// list filters: show only drafts, only unlisted pages, only items with unsaved changes on this device
 	// (several at once show any of them). posts can also put drafts and unsaved ones first
-	let filters = $state({ dictionary: { draft: false, local: false, sound: false, featured: false, first: false }, posts: { draft: false, local: false, featured: false, first: true }, pages: { draft: false, local: false, unlisted: false, first: true } });
+	let filters = $state({ dictionary: { draft: false, local: false, sound: false, featured: false, first: true }, posts: { draft: false, local: false, featured: false, first: true }, pages: { draft: false, local: false, unlisted: false, first: true } });
 	const isLocal = (/** @type {Entry} */ e) => !!partials[`${e.kind}/${e.name}`];
 	// the groups when sorting: 0 drafts and unsaved, then (pages only) 1 unlisted, then the rest
-	// (posts: drafts and unsaved, then featured, then the rest; pages: drafts and unsaved, unlisted, the rest)
-	const GROUPS = { dictionary: ['draft / local words', '', 'words'], posts: ['draft / local posts', 'featured posts', 'active posts'], pages: ['draft / local pages', 'unlisted pages', 'active pages'] };
+	// (posts and words: drafts and unsaved, then featured, then the rest; pages: drafts and unsaved, unlisted, the rest)
+	const GROUPS = { dictionary: ['draft / local words', 'featured words', 'active words'], posts: ['draft / local posts', 'featured posts', 'active posts'], pages: ['draft / local pages', 'unlisted pages', 'active pages'] };
 	const rank = (/** @type {Entry} */ e) =>
 		e.meta.draft || isLocal(e) ? 0 : (e.kind === 'pages' ? e.meta.unlisted : e.meta.featured) ? 1 : 2;
 	/** @param {'dictionary' | 'posts' | 'pages'} k @param {Entry} e */
@@ -813,7 +813,7 @@
 				<CloudAlert size={16} />{all.filter(isLocal).length + newPartials.filter(([, p]) => p.kind === k).length}
 			</button>
 			<span class="gap"></span>
-			{#if k !== 'dictionary'}
+			{#if f}
 				<button class:on={f.first} title="group: drafts and unsaved first" aria-pressed={f.first} onclick={() => (f.first = !f.first)}>
 					<ArrowUpNarrowWide size={16} />
 				</button>
