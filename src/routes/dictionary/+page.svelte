@@ -66,7 +66,7 @@
 
 <main>
 	<header>
-		<h1>dictionary</h1>
+		<h1 class="gradient-title">dictionary</h1>
 		<p class="lead">{data.words.length} abelus {data.words.length === 1 ? 'word' : 'words'}</p>
 	</header>
 
@@ -125,7 +125,7 @@
 		margin: 0;
 		font-family: var(--title);
 		font-style: italic;
-		font-weight: 600;
+		font-weight: 700;
 		font-size: clamp(2.4rem, 6vw, 3.6rem);
 	}
 
