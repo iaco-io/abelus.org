@@ -27,14 +27,14 @@
  *   words: string[],
  *   phonotactics: import('../phonotactics.js').Rules,
 	 *   categories: string[],
-	 *   tagsInUse: string[],
+	 *   tagsInUse: string[], siblings?: string[],
 	 *   ondelete: () => Promise<void>,
 	 *   onback: () => void,
 	 *   partial: boolean,
 	 *   ondiscard: () => void
 	 * }}
 	 */
-	let { item = $bindable(), affixes, phonotactics, words, images, resolve, ask, manage, alphabet, categories, tagsInUse, onsave, onupload, ondelete, onback, partial, ondiscard } = $props();
+	let { item = $bindable(), affixes, phonotactics, words, images, resolve, ask, manage, alphabet, categories, tagsInUse, siblings = [], onsave, onupload, ondelete, onback, partial, ondiscard } = $props();
 
 	let busy = $state('');
 	/** @type {HTMLTextAreaElement | undefined} */
@@ -66,7 +66,10 @@
 	// a number in front, when used, has a fixed width: 001- for posts, 01- for pages
 	const digits = $derived(item.kind === 'posts' ? 3 : item.kind === 'pages' ? 2 : 0);
 	const badNumber = $derived(!!digits && (item.name.match(/^(\d+)-/)?.[1].length ?? digits) !== digits);
-	const validName = $derived(/^[a-z0-9][a-z0-9-]*$/.test(item.name) && !badNumber);
+	// two posts (or pages) with the same number can't both have it as their short address: the site wouldn't build
+	const number = $derived(item.name.match(/^(\d+)-/)?.[1] ?? '');
+	const sameNumber = $derived(number ? (siblings.find((n) => n.startsWith(`${number}-`)) ?? '') : '');
+	const validName = $derived(/^[a-z0-9][a-z0-9-]*$/.test(item.name) && !badNumber && !sameNumber);
 	const links = $derived.by(() => {
 		if (!validName) return '';
 		const { id, url } = urls(item.kind, item.name);
@@ -692,7 +695,7 @@
 			{/if}
 		</label>
 		<label>
-			<span>file name {badNumber ? `→ number must be ${'0'.repeat(digits - 1)}1-` : links ? `→ ${links}` : ''}</span>
+			<span class:warn={!!sameNumber}>file name {badNumber ? `→ number must be ${'0'.repeat(digits - 1)}1-` : sameNumber ? `→ ${number} is already used by ${sameNumber.replace(/^\d+-/, '')}` : links ? `→ ${links}` : ''}</span>
 			<span class="suffix">
 				<input bind:value={item.name} placeholder="file-name" oninput={() => (autoName = false)} />
 				<em>.md</em>
@@ -1901,5 +1904,10 @@
 		.fields {
 			grid-template-columns: 1fr;
 		}
+	}
+
+	/* a number already taken: said in a warm colour */
+	label span.warn {
+		color: #c07a4a;
 	}
 </style>
