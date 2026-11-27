@@ -1,5 +1,10 @@
 [
 	{
+		"affix": "usu",
+		"pos": "noun (++)",
+		"type": "suffix"
+	},
+	{
 		"affix": "us",
 		"pos": "noun (+)",
 		"type": "suffix"
@@ -12,6 +17,11 @@
 	{
 		"affix": "as",
 		"pos": "noun (-)",
+		"type": "suffix"
+	},
+	{
+		"affix": "asa",
+		"pos": "noun (--)",
 		"type": "suffix"
 	},
 	{
