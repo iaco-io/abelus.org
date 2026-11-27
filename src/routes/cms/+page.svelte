@@ -32,7 +32,7 @@
 	import savedAlphabet from '../../alphabet.json';
 	import { github, rawUrl, utf8ToBase64 } from '#lib/cms/github.js';
 	import { encrypt, decrypt } from '#lib/crypto.js';
-	import { parse, serialize, urls, RESERVED } from '#lib/markdown.js';
+	import { parse, serialize, urls, RESERVED, normalize } from '#lib/markdown.js';
 
 	/** @typedef {'dictionary' | 'posts' | 'pages' | 'redirects'} Kind */
 	/** @typedef {Kind | 'media'} Section */
@@ -125,6 +125,20 @@
 		progress = i;
 	});
 
+
+	// every address already in use, by the other posts, pages and redirects (and the site itself): the editor
+	// warns when the one being edited would take one of them, as the site couldn't be built
+	const taken = $derived.by(() => {
+		const map = new Map(RESERVED.map((p) => [p, 'the site']));
+		const kind = editing?.kind;
+		const from = editing?.from;
+		for (const e of entries) {
+			if (e.kind === kind && e.name === from) continue;
+			const { id, url, slug } = urls(e.kind, e.name);
+			for (const p of [url, ...(id ? [`/${id}/`] : []), ...(e.meta.alias ?? []).map(normalize)]) if (!map.has(p)) map.set(p, slug);
+		}
+		return map;
+	});
 
 	// each list scrolls on its own and keeps its place, also after a trip to the editor
 	/** @type {Record<string, HTMLElement | undefined>} */
@@ -928,7 +942,7 @@
 	{#if !api}
 		<Login onlogin={login} />
 	{:else if editing}
-		<Editor bind:item={editing} {affixes} {phonotactics} words={entries.filter((e) => e.kind === 'dictionary' && !e.meta.draft).map((e) => e.meta.title || e.name)} {images} {resolve} {ask} {manage} {alphabet} {categories} tagsInUse={allTags.map(([t]) => t)} siblings={entries.filter((e) => e.kind === editing?.kind && e.name !== editing?.from).map((e) => e.name)} onsave={save} onupload={upload} ondelete={remove} onback={() => (editing = null)} partial={!!partials[keyOf(editing)]} ondiscard={discard} />
+		<Editor bind:item={editing} {affixes} {phonotactics} words={entries.filter((e) => e.kind === 'dictionary' && !e.meta.draft).map((e) => e.meta.title || e.name)} {images} {resolve} {ask} {manage} {alphabet} {categories} tagsInUse={allTags.map(([t]) => t)} {taken} onsave={save} onupload={upload} ondelete={remove} onback={() => (editing = null)} partial={!!partials[keyOf(editing)]} ondiscard={discard} />
 	{:else}
 		<header>
 			<div class="top">
